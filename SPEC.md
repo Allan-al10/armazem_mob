@@ -433,7 +433,7 @@ Marcar conforme concluir. Fases já cobertas pelo projeto existente (ver Seção
   - `npx expo export --platform android` → **passou**; bundle Hermes Android gerado em `dist/`.
   - Teste e2e da Fase 4 via `ConvexHttpClient` (**66 verificações**) → **passou**: fiado exige telefone, endereço e data; criação transacional e baixa de estoque; agrupamento e ordenação em Quem deve; duas compras do mesmo cliente; pagamentos parciais em dinheiro, cartão e Pix; bloqueio de valor zero, negativo e acima do saldo; quitação, histórico e consulta do fiado pela venda (usada pela nota); cancelamento sem pagamento e bloqueio após pagamento; isolamento entre duas lojas; acesso anônimo bloqueado; limpeza total dos dados temporários. Os arquivos de teste/limpeza foram removidos e o Convex regenerou os tipos sem eles.
   - Teste e2e da Fase 3 (histórico) → **62 verificações** passaram.
-  - `npx expo-doctor` → **19/21 checks**. As 2 falhas são **falsos positivos** por o diretório não ser um repositório Git: avisos sobre `.expo/` e `.env.local`, ambos já presentes no `.gitignore`.
+  - `npx expo-doctor` → **21/21 checks**, sem problemas detectados, com o projeto já versionado em Git.
   - `npx convex run health:ping` → **`"ok"`**.
   - O backend local escuta em `0.0.0.0:3210`/`3211`; o `.env.local` está apontando para o IP da máquina (`192.168.1.14`) para testar no celular físico. Na web, `localhost` funciona; para outro IP de rede, ajustar `EXPO_PUBLIC_CONVEX_URL`.
   - **Não validado em aparelho físico:** abertura real da impressão/PDF, da folha de compartilhamento, dos deep links de WhatsApp/SMS, do diálogo de pagamento do fiado e dos links `tel:`/WhatsApp de cobrança. Os bundles e as APIs do Expo foram verificados, mas o teste de dispositivo fica pendente.
@@ -443,7 +443,7 @@ Marcar conforme concluir. Fases já cobertas pelo projeto existente (ver Seção
   3. A navegação fixa com 4 abas ainda não foi criada. O Início já oferece os quatro atalhos grandes, mas a barra inferior continua pendente.
   4. Formulários usam estado controlado + validações compartilhadas em `src/lib/validation.ts`; `react-hook-form` e `zod` ainda não foram adicionados.
   5. Dependências: `expo-print` e `expo-sharing` foram adicionados na Fase 3. Ainda faltam `expo-notifications`, `expo-speech`, `react-hook-form` e `zod` para as fases seguintes.
-  6. O diretório **não é um repositório Git** (há `.gitignore`, mas não houve `git init`); isso causa os 2 falsos positivos do `expo-doctor`.
+  6. O projeto agora é um **repositório Git local** na branch `main`, com commit inicial das Fases 0–4. Ainda não há `remote` configurado; dependências, builds, `.expo/`, `.convex/` e `.env.local` ficam fora do versionamento.
   7. A saída web foi mudada de `static` para `single` (SPA) para evitar problemas de SSR com o Convex Auth.
   8. O lint está configurado, mas ainda **não há testes unitários** (Jest) nem testes de interface automatizados; a spec prevê testes na Fase 6.
   9. A data de chegada usa dois botões grandes ("Hoje" e "Ontem") em vez de seletor de calendário. Cobre o caso comum sem dependência nativa e sem digitação de data; datas mais antigas ficam para uma evolução futura.

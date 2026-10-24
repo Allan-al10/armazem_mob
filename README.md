@@ -4,6 +4,17 @@ App de controle de estoque, vendas e fiado para pequenos comerciantes, com inter
 
 > **Status:** Fases 0, 1, 2, 3 e 4 concluídas (base acessível, autenticação/cadastro, estoque, vendas e fiado). A próxima é a Fase 5 (avisos push, cron de vencimentos, tutorial e voz).
 
+## Controle de versão
+
+O projeto está em um repositório **Git local**, na branch `main`, com o commit inicial das Fases 0–4. Dependências, builds, estado local do Expo/Convex e `.env.local` ficam fora do versionamento.
+
+Ainda não há `remote` configurado. Para publicar com o nome **`armazem_mob`**, crie um repositório vazio no seu provedor e rode:
+
+```bash
+git remote add origin <url-do-repositorio>
+git push -u origin main
+```
+
 ## Requisitos
 
 - Node.js 24+ (testado com 24.21.0)
@@ -142,7 +153,7 @@ npx expo export --platform android
 
 O lint está configurado com ESLint 9 + `eslint-config-expo` e passa sem avisos. Ainda não há testes unitários (Jest); as Fases 3 e 4 foram validadas por testes e2e temporários do backend com `ConvexHttpClient` (62 e 66 verificações), removidos depois da execução.
 
-O `expo-doctor` pode mostrar 2 falhas sobre `.expo/` e `.env.local` quando o diretório **não é um repositório Git**. O `.gitignore` já contém `.expo/` e `.env*.local`; são falsos positivos nesse caso.
+O `expo-doctor` passa nos **21/21 checks**. O `.gitignore` mantém `.expo/`, `.env*.local`, `node_modules/`, `dist/` e `.convex/` fora do repositório.
 
 ## Estrutura
 
