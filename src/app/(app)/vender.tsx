@@ -21,10 +21,12 @@ import { Screen } from "@/components/Screen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { StepIndicator } from "@/components/StepIndicator";
 import { TextField } from "@/components/TextField";
+import { TutorialModal } from "@/components/TutorialModal";
 import { api, type Id } from "@/lib/api";
 import { addDays, formatDateBR, startOfDay } from "@/lib/date";
 import { friendlyError } from "@/lib/errors";
 import { fieldHelp } from "@/lib/help";
+import { useTutorial } from "@/lib/useTutorial";
 import {
     calculateChangeCents,
     calculateTotalCents,
@@ -107,6 +109,7 @@ export default function SellScreen() {
     const products = useQuery(api.products.list, {});
     const customers = useQuery(api.customers.list, {});
     const createSale = useMutation(api.sales.create);
+    const tutorial = useTutorial("vender");
 
     const [step, setStep] = useState<Step>(1);
     const [customerName, setCustomerName] = useState("");
@@ -1078,6 +1081,12 @@ export default function SellScreen() {
                 loading={saving}
                 onConfirm={handleConfirmSale}
                 onCancel={() => setConfirmVisible(false)}
+            />
+
+            <TutorialModal
+                visible={tutorial.visible}
+                tutorialKey="vender"
+                onClose={tutorial.close}
             />
         </>
     );

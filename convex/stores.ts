@@ -18,6 +18,10 @@ const storeValidator = v.object({
     ownerId: v.id("users"),
     ...storeFields,
     nextSaleNumber: v.optional(v.number()),
+    remindersEnabled: v.optional(v.boolean()),
+    reminderDaysBefore: v.optional(v.number()),
+    reminderHour: v.optional(v.number()),
+    reminderTimezoneOffsetMinutes: v.optional(v.number()),
 });
 
 type StoreInput = {

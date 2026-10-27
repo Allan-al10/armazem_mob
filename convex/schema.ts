@@ -36,6 +36,14 @@ export default defineSchema({
         address: addressValidator,
         // Próximo número sequencial de venda. Opcional para lojas criadas antes da Fase 3.
         nextSaleNumber: v.optional(v.number()),
+        // Preferências dos avisos de fiado (Fase 5).
+        remindersEnabled: v.optional(v.boolean()),
+        // Quantos dias antes do vencimento o aviso também deve ser enviado.
+        reminderDaysBefore: v.optional(v.number()),
+        // Horário local do aviso, de 0 a 23.
+        reminderHour: v.optional(v.number()),
+        // Diferença do fuso local em relação a UTC, em minutos (Brasília = -180).
+        reminderTimezoneOffsetMinutes: v.optional(v.number()),
     })
         .index("by_owner", ["ownerId"])
         .index("by_cnpj", ["cnpj"]),
@@ -161,4 +169,18 @@ export default defineSchema({
     })
         .index("by_store", ["storeId"])
         .index("by_product", ["productId"]),
+
+    // Tokens dos aparelhos que recebem avisos de fiado.
+    pushTokens: defineTable({
+        userId: v.id("users"),
+        storeId: v.id("stores"),
+        token: v.string(),
+        platform: v.union(v.literal("android"), v.literal("ios")),
+        // O mesmo token pode ser renovado; updatedAt ajuda a diagnosticar tokens antigos.
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+        .index("by_token", ["token"])
+        .index("by_store", ["storeId"])
+        .index("by_user", ["userId"]),
 });

@@ -143,6 +143,16 @@ export const helpTexts: Record<string, HelpContent> = {
             "O comprovante é simples e não substitui documento fiscal.",
         ],
     },
+    configuracoes: {
+        title: "Configurações",
+        steps: [
+            "Aqui você liga ou desliga os avisos de fiado.",
+            "Escolha com quantos dias de antecedência e em que horário o celular deve avisar.",
+            "Os avisos também saem no dia do vencimento e enquanto o fiado estiver atrasado.",
+            "Toque em Rever tutorial para ver as explicações de novo.",
+            "Depois de mudar, toque em Salvar configurações.",
+        ],
+    },
     "coming-soon": {
         title: "Módulo em construção",
         steps: [
@@ -152,6 +162,129 @@ export const helpTexts: Record<string, HelpContent> = {
         ],
     },
 };
+
+export type TutorialStep = {
+    icon: string;
+    title: string;
+    text: string;
+};
+
+export const tutorials: Record<string, TutorialStep[]> = {
+    home: [
+        {
+            icon: "👋",
+            title: "Bem-vindo ao Meu Armazém",
+            text: "Este aplicativo ajuda você a cuidar do estoque, das vendas e dos fiados. Vamos conhecer as partes principais.",
+        },
+        {
+            icon: "📊",
+            title: "Resumo do dia",
+            text: "No Início você vê quanto vendeu hoje, quais produtos estão acabando e quem está devendo. Toque nos cartões de vendas e de fiados para abrir.",
+        },
+        {
+            icon: "🧾",
+            title: "Suas tarefas",
+            text: "Use os atalhos grandes para registrar mercadoria, fazer uma venda, ver o estoque ou cobrar um fiado.",
+        },
+        {
+            icon: "❓",
+            title: "Ajuda em todas as telas",
+            text: "Toque em ? Ajuda no canto superior direito sempre que tiver dúvida. Você também pode ouvir a explicação em voz alta.",
+        },
+    ],
+    "chegou-mercadoria": [
+        {
+            icon: "📦",
+            title: "Chegou mercadoria",
+            text: "Use esta tela quando um fornecedor entregar produtos para a sua loja.",
+        },
+        {
+            icon: "🛒",
+            title: "Escolha o produto",
+            text: "Toque em um produto que já existe ou crie um novo. Depois digite quantas unidades chegaram.",
+        },
+        {
+            icon: "💰",
+            title: "Valor da caixa",
+            text: "Digite o valor total que você pagou pela caixa. O aplicativo calcula sozinho quanto custou cada unidade.",
+        },
+        {
+            icon: "🏷️",
+            title: "Preço de venda",
+            text: "Digite por quanto você vai vender cada unidade. Antes de salvar, o aplicativo mostra o lucro.",
+        },
+    ],
+    estoque: [
+        {
+            icon: "📋",
+            title: "Seu estoque",
+            text: "Aqui aparecem os produtos, a quantidade que você tem e o preço de venda.",
+        },
+        {
+            icon: "🔎",
+            title: "Encontrar um produto",
+            text: "Digite parte do nome no campo de busca. A lista diminui enquanto você digita.",
+        },
+        {
+            icon: "⚠️",
+            title: "Estoque baixo",
+            text: "Quando a quantidade fica igual ou menor que o limite do produto, aparece um aviso para você repor.",
+        },
+        {
+            icon: "👆",
+            title: "Ver os detalhes",
+            text: "Toque em um produto para ver o histórico, mudar o preço ou ajustar a quantidade por perda, quebra ou contagem.",
+        },
+    ],
+    vender: [
+        {
+            icon: "🧾",
+            title: "Nova venda",
+            text: "Esta tela tem quatro passos: cliente, produtos, resumo e pagamento. O aplicativo mostra em que passo você está.",
+        },
+        {
+            icon: "🙋",
+            title: "Quem está comprando",
+            text: "Digite o nome do cliente. Se ele já comprou antes, toque no nome na lista de sugestões.",
+        },
+        {
+            icon: "🛒",
+            title: "Produtos e quantidades",
+            text: "Busque o produto e toque em Adicionar. Confira a quantidade e, se precisar, altere o preço só nesta venda.",
+        },
+        {
+            icon: "💳",
+            title: "Pagamento e nota",
+            text: "Escolha dinheiro, cartão, Pix ou fiado. No fiado, preencha o telefone, o endereço e a data combinada. Depois toque em Concluir venda.",
+        },
+    ],
+    fiado: [
+        {
+            icon: "📒",
+            title: "Quem deve",
+            text: "Aqui ficam os clientes com fiado em aberto. A lista mostra primeiro quem tem o vencimento mais próximo.",
+        },
+        {
+            icon: "📅",
+            title: "Vencimentos",
+            text: "A etiqueta mostra se o fiado está em dia, vence hoje ou está atrasado. Toque no cliente para ver as compras.",
+        },
+        {
+            icon: "💵",
+            title: "Receber uma parte",
+            text: "Dentro do cliente, toque em Registrar pagamento. Pode receber o valor todo ou só uma parte do que ele deve.",
+        },
+        {
+            icon: "🔔",
+            title: "Avisos de vencimento",
+            text: "O aplicativo pode avisar no celular quando um fiado estiver perto de vencer ou atrasado. Você escolhe os dias e o horário em Configurações.",
+        },
+    ],
+};
+
+export function getTutorial(key: string): TutorialStep[] {
+    return tutorials[key] ?? tutorials.home;
+}
 
 export const fieldHelp = {
     name: "Digite seu nome completo, como você quer ser chamado no app.",

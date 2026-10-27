@@ -1,5 +1,5 @@
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
@@ -9,14 +9,19 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { Screen } from "@/components/Screen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { SummaryCard } from "@/components/SummaryCard";
+import { TutorialModal } from "@/components/TutorialModal";
 import { api } from "@/lib/api";
 import { addDays, daysUntil, startOfDay } from "@/lib/date";
 import { friendlyError } from "@/lib/errors";
 import { formatCents } from "@/lib/money";
+import { unregisterPushNotificationsAsync } from "@/lib/push";
+import { useTutorial } from "@/lib/useTutorial";
 import { theme } from "@/theme";
 
 export default function HomeScreen() {
     const { signOut } = useAuthActions();
+    const unregisterPushToken = useMutation(api.reminders.unregisterPushToken);
+    const tutorial = useTutorial("home");
     const store = useQuery(api.stores.getMine);
     const dayStart = startOfDay();
     const summary = useQuery(
@@ -54,6 +59,16 @@ export default function HomeScreen() {
 
     const handleLogout = async () => {
         setLoggingOut(true);
+        try {
+            const token = await unregisterPushNotificationsAsync();
+            if (token) {
+                await unregisterPushToken({ token });
+            }
+        } catch (error) {
+            // O logout não deve ficar preso se o servidor não responder.
+            console.warn("Não foi possível remover o token de aviso no logout.", error);
+        }
+
         try {
             await signOut();
         } catch (error) {
@@ -148,6 +163,13 @@ export default function HomeScreen() {
                 <Text style={styles.sectionTitle}>Sua conta</Text>
 
                 <BigButton
+                    label="Configurações"
+                    description="Avisos de fiado, horário e tutorial"
+                    icon="🔔"
+                    onPress={() => router.push("/configuracoes")}
+                    variant="secondary"
+                />
+                <BigButton
                     label="Meu cadastro"
                     description="Conferir e corrigir os dados do estabelecimento"
                     icon="⚙️"
@@ -173,6 +195,12 @@ export default function HomeScreen() {
                 loading={loggingOut}
                 onConfirm={handleLogout}
                 onCancel={() => setLogoutVisible(false)}
+            />
+
+            <TutorialModal
+                visible={tutorial.visible}
+                tutorialKey="home"
+                onClose={tutorial.close}
             />
         </>
     );

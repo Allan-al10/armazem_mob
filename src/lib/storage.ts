@@ -37,3 +37,6 @@ const webStorage = {
 };
 
 export const authStorage = Platform.OS === "web" ? webStorage : secureStorage;
+
+/** Armazenamento local para preferências simples, como o tutorial já visto. */
+export const appStorage = Platform.OS === "web" ? webStorage : secureStorage;

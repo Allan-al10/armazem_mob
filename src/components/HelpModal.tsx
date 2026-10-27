@@ -6,6 +6,7 @@ import {
     View,
 } from "react-native";
 import { BigButton } from "@/components/BigButton";
+import { ReadAloudButton } from "@/components/ReadAloudButton";
 import { getHelp } from "@/lib/help";
 import { theme } from "@/theme";
 
@@ -48,6 +49,13 @@ export function HelpModal({ visible, helpKey, onClose }: HelpModalProps) {
                         ))}
                     </ScrollView>
 
+                    {visible ? (
+                        <ReadAloudButton
+                            text={`${help.title}. ${help.steps.join(" ")}`}
+                            label="Ouvir esta ajuda"
+                        />
+                    ) : null}
+
                     <BigButton label="Entendi" onPress={onClose} />
                 </View>
             </View>
@@ -84,6 +92,7 @@ const styles = StyleSheet.create({
     },
     stepsScroll: {
         flexGrow: 0,
+        flexShrink: 1,
     },
     steps: {
         gap: theme.spacing.lg,

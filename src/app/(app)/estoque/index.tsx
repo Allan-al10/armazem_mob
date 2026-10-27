@@ -6,14 +6,17 @@ import { BigButton } from "@/components/BigButton";
 import { Screen } from "@/components/Screen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { TextField } from "@/components/TextField";
+import { TutorialModal } from "@/components/TutorialModal";
 import { api } from "@/lib/api";
 import { formatCents } from "@/lib/money";
 import { formatQuantityWithUnit } from "@/lib/quantity";
+import { useTutorial } from "@/lib/useTutorial";
 import { normalizeForSearch } from "@/lib/validation";
 import { theme } from "@/theme";
 
 export default function StockListScreen() {
     const products = useQuery(api.products.list);
+    const tutorial = useTutorial("estoque");
     const [search, setSearch] = useState("");
 
     const query = normalizeForSearch(search);
@@ -122,6 +125,12 @@ export default function StockListScreen() {
                     style={styles.action}
                 />
             </Screen>
+
+            <TutorialModal
+                visible={tutorial.visible}
+                tutorialKey="estoque"
+                onClose={tutorial.close}
+            />
         </>
     );
 }

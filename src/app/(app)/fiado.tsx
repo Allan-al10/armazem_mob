@@ -6,15 +6,18 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 import { Screen } from "@/components/Screen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { SummaryCard } from "@/components/SummaryCard";
+import { TutorialModal } from "@/components/TutorialModal";
 import { api } from "@/lib/api";
 import { creditDueLabel, creditDueTone } from "@/lib/credit";
 import { daysUntil, formatDateBR } from "@/lib/date";
 import { formatCents } from "@/lib/money";
+import { useTutorial } from "@/lib/useTutorial";
 import { formatPhone } from "@/lib/validation";
 import { theme } from "@/theme";
 
 export default function CreditScreen() {
     const debtors = useQuery(api.credits.debtors, {});
+    const tutorial = useTutorial("fiado");
 
     if (debtors === undefined) {
         return <LoadingScreen />;
@@ -152,6 +155,12 @@ export default function CreditScreen() {
                     </View>
                 )}
             </Screen>
+
+            <TutorialModal
+                visible={tutorial.visible}
+                tutorialKey="fiado"
+                onClose={tutorial.close}
+            />
         </>
     );
 }

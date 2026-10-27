@@ -258,7 +258,8 @@ Dinheiro sempre em **centavos (inteiros)**.
 | `credits` (fiado) | `storeId`, `saleId`, `customerId`, `customerName`, `phone`, `address`, `totalCents`, `paidCents`, `dueDate`, `status` (`open`, `paid`, `overdue`), `lastReminderAt?` |
 | `creditPayments` | `creditId`, `amountCents`, `method`, `paidAt` |
 | `stockMovements` | `productId`, `type` (`entry`, `sale`, `cancel`, `adjustment`), `quantity`, `reason?`, `refId`, `createdAt` |
-| `pushTokens` / `settings` | token de notificação, dias de aviso, horário, política de estoque negativo |
+| `pushTokens` | `userId`, `storeId`, `token`, `platform`, `createdAt`, `updatedAt` |
+| `stores` (avisos) | `remindersEnabled`, `reminderDaysBefore`, `reminderHour`, `reminderTimezoneOffsetMinutes` |
 
 `unitCostCents` em `saleItems` guarda o custo **no momento da venda**, o que permite calcular lucro depois.
 
@@ -268,7 +269,7 @@ Dinheiro sempre em **centavos (inteiros)**.
 
 - **Mutations:** `stores.create`, `products.create`, `stockEntries.register`, `sales.create` (grava venda, itens e baixa **na mesma transação**), `sales.cancel`, `credits.registerPayment`, `stock.adjust`.
 - **Queries:** `products.list`, `sales.get`, `credits.listOpen`, `dashboard.summary`.
-- **Cron (`crons.ts`):** `credits.sendDueReminders`, diário.
+- **Cron (`crons.ts`):** `reminders.refreshOverdueCredits` e `reminders.sendDueReminders`, de hora em hora, com envio no horário local configurado pela loja.
 
 > Se o `schema.ts` do projeto já tiver tabelas, **estender** em vez de substituir, e manter nomes existentes quando fizerem a mesma função.
 
@@ -331,15 +332,17 @@ Marcar conforme concluir. Fases já cobertas pelo projeto existente (ver Seção
 - [x] Schema: `credits`, `creditPayments`
 - [x] Tela "Quem deve" e registro de pagamentos parciais
 
-> Fase 4 concluída em 24/10/2026. O pagamento parcial, o cancelamento de venda fiado sem pagamento, a nota com vencimento e o cartão de fiados no Início também foram entregues. Avisos push/cron e tutorial/voz continuam na Fase 5.
+> Fase 4 concluída em 24/10/2026. O pagamento parcial, o cancelamento de venda fiado sem pagamento, a nota com vencimento e o cartão de fiados no Início também foram entregues. Avisos push/cron e tutorial/voz foram concluídos na Fase 5.
 
 ### Fase 5: Avisos e ajuda
-- [ ] Registro do token de push e permissões
-- [ ] Cron diário de vencimentos e notificações
-- [ ] Ajuda contextual, ícones "i", tutorial inicial, leitura em voz alta
+- [x] Registro do token de push e permissões
+- [x] Cron de vencimentos e notificações (envio diário no horário da loja)
+- [x] Ajuda contextual, ícones "i", tutorial inicial, leitura em voz alta
+
+> Fase 5 concluída em 27/10/2026. O cron roda de hora em hora para respeitar o horário local escolhido por cada loja e envia uma vez por dia; o padrão é 8h de Brasília. O push remoto depende de um development build com projeto EAS configurado e ainda precisa ser validado em aparelho físico.
 
 ### Fase 6: Acabamento
-- [ ] Testes unitários dos cálculos
+- [x] Testes unitários dos cálculos (Vitest + convex-test; 29 testes)
 - [ ] Teste com pessoas reais de 50+ anos e ajustes
 - [ ] Build final (EAS Build)
 
@@ -370,15 +373,16 @@ Marcar conforme concluir. Fases já cobertas pelo projeto existente (ver Seção
 
 ---
 
-## 12. Estado atual do projeto (Fase 4 — 24/10/2026)
+## 12. Estado atual do projeto (Fase 5 — 27/10/2026)
 
-> Diagnóstico atualizado ao fim da Fase 4. Divergências em relação à spec estão anotadas no fim desta seção.
+> Diagnóstico atualizado ao fim da Fase 5. Divergências em relação à spec estão anotadas no fim desta seção.
 
 - **Estrutura de pastas:** projeto Expo **flat** na raiz (`C:\Users\allan\myapp`), **não é monorepo**. Não existem `apps/` nem `packages/`. O código fica em `src/` e o backend em `convex/`:
   - `src/app/` — rotas do Expo Router:
     - `(auth)/login.tsx` e `(auth)/signup.tsx` — entrada e cadastro em duas etapas.
     - `(setup)/loja.tsx` — cadastro do estabelecimento (passo 2).
-    - `(app)/inicio.tsx` — Início com resumo do dia (vendas, estoque baixo e fiado) e atalhos.
+    - `(app)/inicio.tsx` — Início com resumo do dia (vendas, estoque baixo e fiado), atalhos e Configurações.
+    - `(app)/configuracoes.tsx` — avisos de fiado, ativação do push, dias/horário e Rever tutorial.
     - `(app)/meu-cadastro.tsx` — edição dos dados do estabelecimento.
     - `(app)/chegou-mercadoria.tsx` — registro de mercadoria que chegou (produto novo ou existente).
     - `(app)/estoque/index.tsx` — lista, busca e aviso de estoque baixo.
@@ -388,64 +392,49 @@ Marcar conforme concluir. Fases já cobertas pelo projeto existente (ver Seção
     - `(app)/vendas.tsx` — vendas recentes, com resumo do dia e reabertura da nota.
     - `(app)/fiado.tsx` — lista "Quem deve", total em aberto e clientes ordenados pelo vencimento.
     - `(app)/fiado/[id].tsx` — detalhe do cliente, compras em aberto, pagamentos, Ligar e Cobrar no WhatsApp.
+    - `(app)/_layout.tsx` — Stack autenticado; registra o push e abre o fiado ao tocar na notificação.
     - `index.tsx` — redireciona conforme login e existência de loja.
-  - `src/components/` — `BigButton`, `TextField`, `MoneyInput`, `ProductPicker`, `ChoiceRow`, `Screen`, `ScreenHeader`, `HelpModal`, `ConfirmDialog`, `StepIndicator`, `ErrorBanner`, `SummaryCard` (clicável quando recebe `onPress`), `SaleReceipt`, `SalePriceDialog`, `SaleQuantityDialog`, `CreditPaymentDialog`, `ComingSoon`, `StoreForm`, `LoadingScreen`.
-  - `src/lib/` — `money.ts`, `quantity.ts`, `validation.ts`, `date.ts`, `errors.ts`, `help.ts`, `sale.ts` (texto/HTML da nota, links e rótulos), `credit.ts` (saldo, etiqueta de vencimento e mensagem de cobrança), `types.ts`, `api.ts`, `convex.ts`, `storage.ts`.
+  - `src/components/` — `BigButton`, `TextField`, `MoneyInput`, `ProductPicker`, `ChoiceRow`, `Screen`, `ScreenHeader`, `HelpModal`, `TutorialModal`, `ReadAloudButton`, `ConfirmDialog`, `StepIndicator`, `ErrorBanner`, `SummaryCard` (clicável quando recebe `onPress`), `SaleReceipt`, `SalePriceDialog`, `SaleQuantityDialog`, `CreditPaymentDialog`, `ComingSoon`, `StoreForm`, `LoadingScreen`.
+  - `src/lib/` — `money.ts`, `quantity.ts`, `validation.ts`, `date.ts`, `errors.ts`, `help.ts`, `sale.ts` (texto/HTML da nota, links e rótulos), `credit.ts` (saldo, etiqueta de vencimento e mensagem de cobrança), `types.ts`, `api.ts`, `convex.ts`, `storage.ts`, `push.ts`, `push.web.ts`, `pushTypes.ts`, `usePushRegistration.ts`, `useTutorial.ts`, `tutorialStorage.ts`, `money.test.ts` e `credit.test.ts`.
   - `src/theme.ts` — cores, fontes, espaçamentos, raios e alvos de toque.
   - `src/assets/` — `img1.png` e `img2.png`.
-  - `convex/` — `schema.ts` (authTables + `users` + `stores` + `products` + `stockEntries` + `stockMovements` + `customers` + `sales` + `saleItems` + `credits` + `creditPayments`), `auth.ts`, `auth.config.ts`, `http.ts`, `users.ts`, `stores.ts`, `products.ts`, `stock.ts`, `customers.ts`, `sales.ts`, `credits.ts`, `dashboard.ts`, `lib.ts`, `health.ts`, `validators.ts` e `_generated/`.
+  - `convex/` — `schema.ts` (authTables + `users` + `stores` + `products` + `stockEntries` + `stockMovements` + `customers` + `sales` + `saleItems` + `credits` + `creditPayments` + `pushTokens`), `crons.ts`, `reminders.ts`, `auth.ts`, `auth.config.ts`, `http.ts`, `users.ts`, `stores.ts`, `products.ts`, `stock.ts`, `customers.ts`, `sales.ts`, `credits.ts`, `dashboard.ts`, `lib.ts`, `health.ts`, `validators.ts`, `sales.test.ts`, `reminders.test.ts` e `_generated/`.
+  - Raiz: `app.json`, `eas.json`, `vitest.config.mts`, `eslint.config.js`, `SPEC.md` e `README.md`.
 - **Gerenciador de pacotes / workspaces:** **npm** (`package-lock.json`), sem workspaces. Não há `bun.lock`, `pnpm-lock.yaml` nem `yarn.lock`.
-- **Versões:** Node **24.21.0**, npm **11.19.0**, Expo SDK **57** (`expo ~57.0.31`), React Native **0.86.3**, React **19.2.3**, TypeScript **~6.0.3**, Convex **^1.47.0**, `@convex-dev/auth` **^0.0.96**, `@auth/core` **^0.41.3**, `expo-print` **~57.0.2**, `expo-sharing` **~57.0.24**, `expo-secure-store` **~57.0.4**, ESLint **^9.0.0** e `eslint-config-expo` **~57.0.2**.
+- **Versões:** Node **24.21.0**, npm **11.19.0**, Expo SDK **57** (`expo ~57.0.31`), React Native **0.86.3**, React **19.2.3**, TypeScript **~6.0.3**, Convex **^1.47.0**, `@convex-dev/auth` **^0.0.96**, `@auth/core` **^0.41.3**, `expo-notifications` **~57.0.24**, `expo-speech` **~57.0.3**, `expo-dev-client` **~57.0.20**, `expo-print` **~57.0.2**, `expo-sharing` **~57.0.24**, `expo-secure-store` **~57.0.4**, Vitest **^5.0.5**, `convex-test` **^0.0.65**, ESLint **^9.0.0** e `eslint-config-expo` **~57.0.2**.
 - **Navegação:** **Expo Router ~57.0.29**, com `typedRoutes` ativado em `app.json`, raiz em `src/app` e `src/app/_layout.tsx` com `ConvexAuthProvider` e `Stack.Protected`. Há layouts de grupo para `(auth)`, `(setup)` e `(app)`. A barra inferior de 4 abas ainda não existe; o Início tem os quatro atalhos grandes e as telas reais de estoque e vendas já estão ligadas a ele.
-- **Convex (schema, funções, auth):** **inicializado em deployment local anônimo** (modo beta, sem conta) em `http://127.0.0.1:3210`. O `schema.ts` contém `authTables`, `users` (índices `email` e `phone`), `stores` (índices `by_owner` e `by_cnpj`, contador opcional `nextSaleNumber`), `products` (índices `by_store` e `by_store_and_nameQuery`), `stockEntries` (índices `by_store` e `by_product`), `stockMovements` (índices `by_store` e `by_product`, campo opcional `refId`), `customers` (índices `by_store` e `by_store_and_nameQuery`), `sales` (índices `by_store`, `by_store_and_createdAt` e `by_customer`), `saleItems` (índice `by_sale`), `credits` (índices `by_store`, `by_store_and_dueDate`, `by_customer` e `by_sale`; guarda total, pago, vencimento, telefone/endereço copiados, status, observação e `lastReminderAt` opcional) e `creditPayments` (índice `by_credit`; valor, forma e data). Funções publicadas: `health:ping`, `users:current`, `stores:getMine`, `stores:create`, `stores:update`, `products:list`, `products:get`, `products:update`, `stock:registerEntry`, `stock:adjust`, `stock:history`, `customers:list`, `sales:create`, `sales:get`, `sales:listRecent`, `sales:cancel`, `credits:debtors`, `credits:byCustomer`, `credits:getBySale`, `credits:registerPayment` e `dashboard:summary`. Todas as funções de loja usam `requireStore` (`convex/lib.ts`), que exige usuário logado e loja; vendas, clientes, fiados, itens e produtos são conferidos contra o `storeId`. O `.env.local` contém `CONVEX_DEPLOYMENT=anonymous:anonymous-agent`, `EXPO_PUBLIC_CONVEX_URL` e `EXPO_PUBLIC_CONVEX_SITE_URL`.
+- **Convex (schema, funções, auth):** **inicializado em deployment local anônimo** (modo beta, sem conta) em `http://127.0.0.1:3210`. O `schema.ts` contém `authTables`, `users` (índices `email` e `phone`), `stores` (índices `by_owner` e `by_cnpj`, contador opcional `nextSaleNumber`), `products` (índices `by_store` e `by_store_and_nameQuery`), `stockEntries` (índices `by_store` e `by_product`), `stockMovements` (índices `by_store` e `by_product`, campo opcional `refId`), `customers` (índices `by_store` e `by_store_and_nameQuery`), `sales` (índices `by_store`, `by_store_and_createdAt` e `by_customer`), `saleItems` (índice `by_sale`), `credits` (índices `by_store`, `by_store_and_dueDate`, `by_customer` e `by_sale`; guarda total, pago, vencimento, telefone/endereço copiados, status, observação e `lastReminderAt` opcional), `creditPayments` (índice `by_credit`) e `pushTokens` (índices `by_user`, `by_store` e `by_token`; token, plataforma e timestamps).
+  - `stores` ganhou os campos opcionais `remindersEnabled`, `reminderDaysBefore`, `reminderHour` e `reminderTimezoneOffsetMinutes`; quando ausentes, valem `true`, `3`, `8` e `-180` (Brasília).
+  - Funções publicadas: `health:ping`, `users:current`, `stores:getMine`, `stores:create`, `stores:update`, `products:list`, `products:get`, `products:update`, `stock:registerEntry`, `stock:adjust`, `stock:history`, `customers:list`, `sales:create`, `sales:get`, `sales:listRecent`, `sales:cancel`, `credits:debtors`, `credits:byCustomer`, `credits:getBySale`, `credits:registerPayment`, `dashboard:summary`, `reminders:settings`, `reminders:updateSettings`, `reminders:registerPushToken` e `reminders:unregisterPushToken`.
+  - Funções internas: `reminders:refreshOverdueCredits`, `reminders:collectDueReminders`, `reminders:markRemindersSent`, `reminders:removePushTokens` e `reminders:sendDueReminders`. `convex/crons.ts` agenda `refreshOverdueCredits` no minuto UTC 5 e `sendDueReminders` no minuto UTC 10, **de hora em hora**. O envio só ocorre quando a hora local da loja coincide com `reminderHour`; `lastReminderAt` evita repetir no mesmo dia local.
+  - Todas as funções de loja usam `requireStore` (`convex/lib.ts`), que exige usuário logado e loja; vendas, clientes, fiados, itens e produtos são conferidos contra o `storeId`. O `.env.local` contém `CONVEX_DEPLOYMENT=anonymous:anonymous-agent`, `EXPO_PUBLIC_CONVEX_URL` e `EXPO_PUBLIC_CONVEX_SITE_URL`.
 - **Autenticação:** **Convex Auth com e-mail e senha** (`Password` provider). O cadastro chama `signIn("password", { flow: "signUp", name, phone, ... })`; o `profile` grava nome, e-mail e telefone na tabela `users`. A sessão é persistida com `expo-secure-store` no celular e `localStorage` na web. As chaves `JWT_PRIVATE_KEY` e `JWKS` ficam no deployment, não no `.env.local`. PIN de 4 a 6 dígitos ainda não foi implementado; a senha atende à alternativa "ou PIN" da spec.
-- **UI/estilo em uso:** **StyleSheet** nativo do React Native com tema centralizado em `src/theme.ts`. Sem NativeWind, Tamagui ou biblioteca de componentes. Cores de alto contraste, corpo mínimo de 18 sp, títulos de 24–34 sp, botões de 64 dp, campos de 60 dp e alvos de toque de pelo menos 56 dp (com `hitSlop` nos ícones "i").
-- **Scripts e testes disponíveis:** `start`, `android`, `ios`, `web`, `typecheck`, `lint` (`expo lint`) e `convex:dev`. O ESLint 9 foi configurado com `eslint-config-expo` em `eslint.config.js`; `npx expo lint` e `npx eslint .` passam sem avisos. **Não há** Jest nem testes unitários automatizados; as Fases 3 e 4 foram validadas por testes e2e temporários via `ConvexHttpClient` (62 e 66 verificações), removidos após a execução.
-- **Variáveis de ambiente:** `.env.local` presente (gerado pelo Convex) com `CONVEX_DEPLOYMENT`, `EXPO_PUBLIC_CONVEX_URL` e `EXPO_PUBLIC_CONVEX_SITE_URL`; não há `.env` versionável. O `.gitignore` ignora `.env*.local`, `.expo/` e `.convex/`.
+- **UI/estilo em uso:** **StyleSheet** nativo do React Native com tema centralizado em `src/theme.ts`. Sem NativeWind, Tamagui ou biblioteca de componentes. Cores de alto contraste, corpo mínimo de 18 sp, títulos de 24–34 sp, botões de 64 dp, campos de 60 dp e alvos de toque de pelo menos 56 dp (com `hitSlop` nos ícones "i"). O tutorial usa cartões grandes, "Pular" sempre visível e leitura em voz alta em `pt-BR`; o mesmo botão de voz aparece na janela de ajuda.
+- **Scripts e testes disponíveis:** `start`, `android`, `ios`, `web`, `typecheck`, `lint` (`expo lint`), `test` (`vitest run`), `test:watch` e `convex:dev`. Os testes usam **Vitest** com dois projetos: `unit` (Node, `src/**/*.test.ts`) e `convex` (edge-runtime + `convex-test`, `convex/**/*.test.ts`). São **4 arquivos e 29 testes** cobrindo moeda, saldo de fiado, vendas/baixa de estoque, lembretes, horário, repetição e configurações. O ESLint 9 com `eslint-config-expo` está em `eslint.config.js`; `npx expo lint` passa sem avisos. Não há Jest nem testes de interface automatizados.
+- **Variáveis de ambiente:** `.env.local` presente (gerado pelo Convex) com `CONVEX_DEPLOYMENT`, `EXPO_PUBLIC_CONVEX_URL` e `EXPO_PUBLIC_CONVEX_SITE_URL`; não há `.env` versionável. O `.gitignore` ignora `.env*.local`, `.expo/`, `.convex/`, `dist/` e `coverage/`. Para o push, o `projectId` do EAS pode vir de `extra.eas.projectId` no `app.json`, de `Constants.easConfig` em um build EAS ou da variável `EXPO_PUBLIC_EAS_PROJECT_ID`; **o projeto ainda não tem `extra.eas.projectId` configurado**, então o registro de push fica desativado com uma mensagem explicativa até esse vínculo ser feito.
 - **O que já está pronto:**
-  - Cadastro de usuário em 2 etapas, login, logout e sessão persistente.
-  - Cadastro do estabelecimento com validação de CNPJ (dígitos verificadores), telefone e UF; edição em Meu cadastro.
-  - Queries/mutations protegidas por `getAuthUserId`; `stores.create/update` conferem o dono e bloqueiam CNPJ duplicado.
-  - **Estoque (Fase 2):** "Chegou mercadoria" aceita produto existente ou novo, quantidade (decimal só para kg), valor da caixa, custo unitário automático (editável), preço de venda, aviso de lucro/prejuízo, data Hoje/Ontem e fornecedor opcional. Salvar cria o produto (se novo), soma o estoque, grava o lote em `stockEntries` e o movimento em `stockMovements` na mesma mutation. Produto duplicado é bloqueado pelo nome normalizado (sem acentos e sem diferenciar maiúsculas).
-  - Lista de estoque com busca por nome, quantidade, preço e aviso "Estoque baixo" (limite padrão 5, editável). Detalhe do produto com edição de preço/limite, ajuste de estoque com motivo obrigatório (perda/quebra, contagem ou outro) e histórico de entradas, saídas, cancelamentos e ajustes.
-  - **Vendas (Fase 3):**
-    - Clientes com nome obrigatório e telefone opcional; sugestões de clientes já cadastrados ao digitar, reaproveitamento pelo nome normalizado e atualização do telefone ao corrigir na venda.
-    - "Nova venda" em 4 passos: Cliente → Produtos → Resumo → Pagamento. Busca de produto, carrinho com botões grandes −/+ (0,5 kg por toque em produtos por quilo), diálogo para corrigir a quantidade exata e diálogo de alteração de preço com confirmação e aviso de desconto/aumento.
-    - Pagamento em Dinheiro, Cartão, Pix ou Fiado. No dinheiro, o campo "Valor recebido" calcula o troco no cliente; o servidor não persiste valor recebido nem troco. O fiado abre o formulário da Fase 4.
-    - Conclusão transacional: grava `sales`, `saleItems`, movimentos de `saida`, baixa o estoque de cada produto e incrementa `stores.nextSaleNumber` na mesma mutation. Se faltar estoque, nada é gravado. Itens guardam nome, unidade, preço e custo do momento da venda; dinheiro fica em centavos inteiros.
-    - Nota com cabeçalho da loja (nome, CNPJ, proprietário, telefone e endereço), número sequencial com 6 dígitos, data/hora, cliente, itens, total, forma de pagamento e, no fiado, o vencimento combinado, agradecimento e rodapé "Comprovante simples, não substitui documento fiscal."
-    - Envio da nota por WhatsApp (`https://wa.me/...`) e SMS (`sms:`), com texto pronto. Impressão na web pela janela do navegador; no celular, "Imprimir nota" abre a impressão do sistema e "Salvar ou compartilhar PDF" gera o arquivo com `expo-print` e abre a folha de compartilhamento com `expo-sharing`.
-    - Cancelamento marca a venda como `Cancelada`, devolve os itens ao estoque e grava movimentos do tipo `cancelamento`; a venda não é apagada e a nota passa a mostrar o aviso de cancelada. Em venda fiado sem nenhum pagamento, o fiado também é apagado; depois do primeiro pagamento, o cancelamento é bloqueado.
-    - Lista de vendas recentes em `/vendas`, com resumo de hoje e reabertura da nota. O cartão "Vendas de hoje" no Início usa `dashboard.summary`, desconta vendas canceladas e abre a lista ao toque.
-  - Ajuda contextual com "?" em todas as telas, "i" nos campos e textos centralizados em `src/lib/help.ts`.
-  - Componentes e utilitários de moeda, quantidade, CNPJ, telefone, data, erros amigáveis e nota (texto/HTML).
-  - **Fiado (Fase 4):**
-    - Formulário no passo de pagamento com nome vindo da venda (editável), telefone e endereço obrigatórios, data combinada por atalhos grandes "Em 7 / 15 / 30 dias" (padrão 7) e observação opcional. O nome editado atualiza o cadastro do cliente; nome duplicado é bloqueado.
-    - `credits` guarda total, valor pago, vencimento, telefone/endereço copiados, status (`open`/`paid`/`overdue`), observação e a venda de origem; `creditPayments` guarda cada pagamento com valor, forma (dinheiro, cartão ou Pix) e data. A venda, o fiado e a baixa de estoque são gravados na mesma transação.
-    - Tela "Quem deve" (`/fiado`) agrupa por cliente, soma o saldo, ordena pelo vencimento mais próximo e mostra etiquetas em texto: "Vence hoje", "Vence amanhã", "Vence em X dias", "Atrasado há X dias" ou "Em dia".
-    - Detalhe do cliente (`/fiado/[id]`) mostra saldo total, compras em aberto, histórico de pagamentos, ações Ligar e Cobrar no WhatsApp (com mensagem pronta) e o diálogo "Registrar pagamento" (parcial ou total, com "Usar o saldo todo"). Pagamento acima do saldo é bloqueado; ao quitar, o status vira `paid`.
-    - A nota da venda fiado mostra o vencimento; o cancelamento é permitido apenas enquanto não houver pagamento. O cartão "Fiados para cobrar" no Início mostra clientes, total em aberto e vencimentos próximos.
-    - O atraso é derivado da data na interface; o status `overdue` e o campo `lastReminderAt` ficam reservados para o cron/avisos da Fase 5.
-- **Verificações executadas (Fase 4):**
+  - **Fases 0–4:** cadastro/login/sessão, cadastro e edição da loja, estoque com entrada/ajuste/histórico/estoque baixo, vendas em 4 passos com baixa transacional, cancelamento com devolução, nota em texto/PDF/WhatsApp/SMS, fiado com data, pagamentos parciais, Quem deve, cobrança por WhatsApp e resumo no Início.
+  - **Avisos (Fase 5):** tela **Configurações** com avisos ligados/desligados, antecedência (1, 2, 3, 5 ou 7 dias), horário (6h, 8h, 10h, 12h ou 18h), ativação do aparelho e status da permissão. Padrões: ligado, 3 dias, 8h e fuso de Brasília (`-180`); o fuso real do aparelho é enviado ao registrar o token e atualizado a cada registro. Com o projeto EAS configurado, o app cria o canal Android `credit-reminders`, pede permissão, obtém o Expo Push Token e salva em `pushTokens`; no logout, remove o token. O cron horário atualiza fiados vencidos, monta um aviso por cliente agrupando as compras, envia pelo Expo Push Service e evita repetir no mesmo dia. O aviso identifica vencimento em 3 dias (ou no valor configurado), 1 dia, hoje e atrasados; ao tocar, abre `/fiado/[id]`.
+  - **Ajuda e tutorial (Fase 5):** botão "? Ajuda" em todas as telas, ícones "i" nos campos, textos centralizados em `src/lib/help.ts`, leitura em voz alta da ajuda e do tutorial com `expo-speech` em `pt-BR`, tutorial de 4 cartões na primeira visita ao Início, Chegou mercadoria, Estoque, Vender e Fiado (com "Pular tutorial" sempre visível) e o botão **Rever tutorial** em Configurações. Os tutoriais são guardados por aparelho em `appStorage`.
+- **Verificações executadas (Fase 5):**
   - `npm run typecheck` (`tsc --noEmit`) → **passou**, sem erros.
-  - `npm run lint` (`expo lint`) → **passou sem avisos**. O ESLint 9 + `eslint-config-expo` está configurado em `eslint.config.js`, com ignores para `dist/`, `.expo/` e `convex/_generated/`.
-  - `npx expo export --platform web` → **passou**; bundle SPA gerado em `dist/` (`web.output: "single"`), incluindo as rotas `/fiado`, `/fiado/[id]`, `/vender`, `/vendas` e `/nota/[id]`.
+  - `npm run lint` (`expo lint`) → **passou sem avisos**.
+  - `npm test` (`vitest run`) → **4 arquivos, 29 testes, todos passaram**; inclui o novo teste do cron de atrasados e da atualização de fuso.
+  - `npx expo export --platform web` → **passou**; bundle SPA gerado em `dist/`.
   - `npx expo export --platform android` → **passou**; bundle Hermes Android gerado em `dist/`.
-  - Teste e2e da Fase 4 via `ConvexHttpClient` (**66 verificações**) → **passou**: fiado exige telefone, endereço e data; criação transacional e baixa de estoque; agrupamento e ordenação em Quem deve; duas compras do mesmo cliente; pagamentos parciais em dinheiro, cartão e Pix; bloqueio de valor zero, negativo e acima do saldo; quitação, histórico e consulta do fiado pela venda (usada pela nota); cancelamento sem pagamento e bloqueio após pagamento; isolamento entre duas lojas; acesso anônimo bloqueado; limpeza total dos dados temporários. Os arquivos de teste/limpeza foram removidos e o Convex regenerou os tipos sem eles.
-  - Teste e2e da Fase 3 (histórico) → **62 verificações** passaram.
-  - `npx expo-doctor` → **21/21 checks**, sem problemas detectados, com o projeto já versionado em Git.
-  - `npx convex run health:ping` → **`"ok"`**.
-  - O backend local escuta em `0.0.0.0:3210`/`3211`; o `.env.local` está apontando para o IP da máquina (`192.168.1.14`) para testar no celular físico. Na web, `localhost` funciona; para outro IP de rede, ajustar `EXPO_PUBLIC_CONVEX_URL`.
-  - **Não validado em aparelho físico:** abertura real da impressão/PDF, da folha de compartilhamento, dos deep links de WhatsApp/SMS, do diálogo de pagamento do fiado e dos links `tel:`/WhatsApp de cobrança. Os bundles e as APIs do Expo foram verificados, mas o teste de dispositivo fica pendente.
+  - `npx expo-doctor` → **21/21 checks**, sem problemas detectados.
+  - `npx convex run health:ping` → **`"ok"`**; `npx convex run reminders:refreshOverdueCredits` e `npx convex run reminders:sendDueReminders` executaram sem erro no deployment local.
+  - As Fases 3 e 4 foram validadas por testes e2e temporários via `ConvexHttpClient` (62 e 66 verificações), removidos depois da execução; os testes unitários atuais permanecem no repositório.
+  - **Não validado em aparelho físico:** push remoto real, abertura do app pelo toque na notificação, permissão do sistema em Android/iOS, tutorial e voz no celular, impressão/PDF, folha de compartilhamento e deep links de WhatsApp/SMS. O push remoto exige **development build** e projeto EAS/FCM/APNs configurados; o Expo Go não é suficiente no Android desde o SDK 53. O `eas.json` já tem perfis `development`, `preview` e `production`, mas falta vincular o projeto EAS.
 - **Divergências em relação à spec:**
   1. A spec assume monorepo (`apps/mobile/`, `packages/shared/`, `convex/`); o projeto é flat. Pela regra 0.1.5, **mantém-se a estrutura atual** e o "shared" virou `src/lib/`.
   2. Autenticação por e-mail e senha; o PIN de 4 a 6 dígitos ainda não existe. A spec permite "senha (ou PIN)".
   3. A navegação fixa com 4 abas ainda não foi criada. O Início já oferece os quatro atalhos grandes, mas a barra inferior continua pendente.
   4. Formulários usam estado controlado + validações compartilhadas em `src/lib/validation.ts`; `react-hook-form` e `zod` ainda não foram adicionados.
-  5. Dependências: `expo-print` e `expo-sharing` foram adicionados na Fase 3. Ainda faltam `expo-notifications`, `expo-speech`, `react-hook-form` e `zod` para as fases seguintes.
-  6. O projeto agora é um **repositório Git local** na branch `main`, com commit inicial das Fases 0–4. Ainda não há `remote` configurado; dependências, builds, `.expo/`, `.convex/` e `.env.local` ficam fora do versionamento.
+  5. `expo-notifications`, `expo-speech` e `expo-dev-client` foram adicionados na Fase 5. Ainda faltam `react-hook-form` e `zod` para as fases seguintes.
+  6. O projeto está no GitHub (`Allan-al10/armazem_mob`), na branch `main`, com os commits das Fases 0–4 e da Fase 5. O remote `origin` está configurado.
   7. A saída web foi mudada de `static` para `single` (SPA) para evitar problemas de SSR com o Convex Auth.
-  8. O lint está configurado, mas ainda **não há testes unitários** (Jest) nem testes de interface automatizados; a spec prevê testes na Fase 6.
+  8. O lint está configurado e agora há **29 testes unitários** com Vitest/convex-test; ainda não há testes de interface automatizados.
   9. A data de chegada usa dois botões grandes ("Hoje" e "Ontem") em vez de seletor de calendário. Cobre o caso comum sem dependência nativa e sem digitação de data; datas mais antigas ficam para uma evolução futura.
   10. O campo `products.active` existe e uma entrada reativa o produto, mas ainda não há controle para desativar/reativar na interface. Produtos inativos não aparecem na venda.
   11. A busca do estoque e a busca de produtos na venda são feitas no cliente sobre a lista da loja, com nome normalizado (sem acentos, minúsculas). Para o porte esperado é instantânea e dispensa busca textual no Convex.
@@ -459,9 +448,15 @@ Marcar conforme concluir. Fases já cobertas pelo projeto existente (ver Seção
   19. A data combinada do fiado usa atalhos grandes de **7, 15 ou 30 dias** (padrão 7), sem calendário nem digitação, seguindo o padrão já usado na data de chegada.
   20. Pagamentos são registrados por compra fiado (`creditId`), não como um caixa único do cliente. O valor não pode passar do saldo daquela compra e não há comprovante/recibo de pagamento nesta fase.
   21. Cancelamento de venda fiado sem pagamento apaga o `credit` e devolve o estoque. Depois do primeiro pagamento, o cancelamento é bloqueado; não há estorno automático.
-  22. O atraso é calculado na interface pela data de vencimento. O status `overdue` e o campo `lastReminderAt` existem no schema, mas o cron/push da Fase 5 ainda não os atualiza.
-  23. A ajuda contextual com "?" e os ícones "i" já existem, mas o tutorial inicial de 3–4 cartões, a leitura em voz alta (`expo-speech`) e a opção "Rever tutorial" continuam na Fase 5.
-- **Fases que podem ser puladas ou reduzidas:** nenhuma fase inteira. Fases 0, 1, 2, 3 e 4 estão concluídas; a próxima é a **Fase 5 (avisos e ajuda)**, com push/cron de vencimentos, tutorial inicial e leitura em voz alta. A Fase 6 (testes unitários, teste com pessoas e build final) continua pendente.
+  22. O atraso é calculado na interface pela data de vencimento, mas o status `overdue` agora também é atualizado pelo cron horário (`refreshOverdueCredits`). `lastReminderAt` é gravado por compra avisada para impedir repetição no mesmo dia local.
+  23. A ajuda contextual com "?" e os ícones "i" já existiam; o tutorial inicial de 4 cartões, a leitura em voz alta (`expo-speech`) e o **Rever tutorial** foram entregues na Fase 5.
+  24. O cron da spec era diário; a implementação roda **de hora em hora** e só envia quando a hora local da loja coincide com o horário configurado. Isso permite horários diferentes por loja sem perder o envio diário. O padrão continua 8h de Brasília.
+  25. A tela de Configurações oferece **1, 2, 3, 5 ou 7 dias** e **6h, 8h, 10h, 12h ou 18h**; o servidor aceita de 1 a 30 dias e de 0 a 23 horas para permitir ajustes futuros sem migração.
+  26. O push remoto exige **development build** e um projeto EAS com credenciais FCM/APNs. O `expo-dev-client` e o `eas.json` estão prontos, mas o `extra.eas.projectId` ainda não foi configurado; no Expo Go o app explica que o push não está disponível. O teste físico do push e do toque na notificação continua pendente.
+  27. Os avisos são agrupados por cliente (um push com o saldo total e a contagem de compras) e não há verificação de recibo do Expo Push Service. Tokens com `DeviceNotRegistered` são removidos; falhas temporárias ficam para o próximo dia.
+  28. A permissão de notificações é solicitada automaticamente ao entrar no app quando o push está configurado; se for negada, a tela Configurações mostra o status, permite tentar de novo e abre os ajustes do sistema.
+  29. O tutorial automático cobre os módulos principais (Início, Chegou mercadoria, Estoque, Vender e Fiado); as telas de detalhe, nota, vendas recentes e Meu cadastro têm ajuda contextual, mas não um tutorial automático. O **Rever tutorial** reabre o tutorial do Início.
+- **Fases que podem ser puladas ou reduzidas:** nenhuma fase inteira. As Fases 0, 1, 2, 3, 4 e 5 estão concluídas no código; resta validar o push em um development build físico. A Fase 6 está com os testes unitários concluídos e ainda precisa do teste com pessoas de 50+ e do build final (EAS Build).
 
 ---
 

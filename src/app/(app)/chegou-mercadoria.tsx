@@ -10,10 +10,12 @@ import { ProductPicker, type ProductOption } from "@/components/ProductPicker";
 import { Screen } from "@/components/Screen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { TextField } from "@/components/TextField";
+import { TutorialModal } from "@/components/TutorialModal";
 import { api } from "@/lib/api";
 import { addDays, startOfDay } from "@/lib/date";
 import { friendlyError } from "@/lib/errors";
 import { fieldHelp } from "@/lib/help";
+import { useTutorial } from "@/lib/useTutorial";
 import { calculateProfit, calculateUnitCostCents, formatCents } from "@/lib/money";
 import {
     formatQuantityWithUnit,
@@ -44,6 +46,7 @@ const ARRIVAL_OPTIONS = [
 export default function NewStockScreen() {
     const products = useQuery(api.products.list);
     const registerEntry = useMutation(api.stock.registerEntry);
+    const tutorial = useTutorial("chegou-mercadoria");
 
     const [mode, setMode] = useState<Mode>("existing");
     const [selected, setSelected] = useState<ProductOption | null>(null);
@@ -429,6 +432,12 @@ export default function NewStockScreen() {
                 loading={saving}
                 onConfirm={() => void saveEntry()}
                 onCancel={() => setConfirmBelowCost(false)}
+            />
+
+            <TutorialModal
+                visible={tutorial.visible}
+                tutorialKey="chegou-mercadoria"
+                onClose={tutorial.close}
             />
         </>
     );
