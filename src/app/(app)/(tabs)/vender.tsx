@@ -74,10 +74,10 @@ const STEP_SUBTITLES: Record<Step, string> = {
 };
 
 const PAYMENT_OPTIONS = [
-    { value: "cash", label: "Dinheiro" },
-    { value: "card", label: "Cartão" },
-    { value: "pix", label: "Pix" },
-    { value: "credit_account", label: "Fiado" },
+    { value: "cash", label: "Dinheiro", icon: "💵", color: "success" },
+    { value: "card", label: "Cartão", icon: "💳", color: "primary" },
+    { value: "pix", label: "Pix", icon: "⚡", color: "accent" },
+    { value: "credit_account", label: "Fiado", icon: "🤝", color: "danger" },
 ] as const;
 
 const PAYMENT_LABELS: Record<PaymentChoice, string> = {
@@ -605,11 +605,11 @@ export default function SellScreen() {
                     <View style={styles.emptyBox}>
                         <Text style={styles.emptyTitle}>Nenhum produto encontrado</Text>
                         <Text style={styles.emptyText}>
-                            Confira o nome ou registre a mercadoria em Chegou mercadoria.
+                            Confira o nome ou registre a mercadoria no Caixa.
                         </Text>
                         <BigButton
-                            label="Ir para Chegou mercadoria"
-                            onPress={() => router.push("/chegou-mercadoria")}
+                            label="Ir para o Caixa"
+                            onPress={() => router.navigate("/caixa")}
                             variant="secondary"
                         />
                     </View>
@@ -1000,17 +1000,18 @@ export default function SellScreen() {
                     />
 
                     <Text style={styles.infoText}>
-                        O valor entra em Quem deve. O cliente pode pagar tudo de uma vez ou aos
-                        poucos.
+                        O valor entra em Contas de Fiado. O cliente pode pagar tudo de uma vez
+                        ou aos poucos.
                     </Text>
                 </>
             )}
 
             <BigButton
-                label="Concluir venda"
+                label="Finalizar Venda"
                 description="Baixar o estoque e preparar a nota"
                 onPress={handleOpenConfirm}
                 icon="✓"
+                variant="success"
                 disabled={cashInsufficient}
             />
             <BigButton
@@ -1027,10 +1028,10 @@ export default function SellScreen() {
     return (
         <>
             <ScreenHeader
-                title="Nova venda"
+                title="Nota de Venda"
                 subtitle={STEP_SUBTITLES[step]}
                 helpKey="vender"
-                showBack
+                showBack={step > 1}
                 onBack={goBack}
             />
             <Screen key={step}>
@@ -1068,7 +1069,7 @@ export default function SellScreen() {
 
             <ConfirmDialog
                 visible={confirmVisible}
-                title="Concluir venda?"
+                title="Finalizar venda?"
                 message={`Cliente: ${normalizeSpaces(customerName)}\nTotal: ${formatCents(
                     totalCents,
                 )}\nPagamento: ${PAYMENT_LABELS[paymentMethod]}${
@@ -1076,7 +1077,7 @@ export default function SellScreen() {
                         ? `\nFiado para ${formatDateBR(creditDueDate)}`
                         : ""
                 }\n\nO estoque será baixado agora.`}
-                confirmLabel="Sim, concluir venda"
+                confirmLabel="Sim, finalizar venda"
                 cancelLabel="Não, voltar"
                 loading={saving}
                 onConfirm={handleConfirmSale}

@@ -8,6 +8,7 @@ import {
     type TextInputProps,
 } from "react-native";
 import { theme } from "@/theme";
+import { useAppTheme } from "@/themeContext";
 
 type TextFieldProps = TextInputProps & {
     label: string;
@@ -27,6 +28,7 @@ export function TextField({
     onBlur,
     ...rest
 }: TextFieldProps) {
+    const { colors } = useAppTheme();
     const [focused, setFocused] = useState(false);
     const [showInfo, setShowInfo] = useState(false);
     const [hidden, setHidden] = useState(secureTextEntry);
@@ -67,7 +69,8 @@ export function TextField({
                 <TextInput
                     {...rest}
                     style={[styles.input, rest.multiline ? styles.inputMultiline : null, style]}
-                    placeholderTextColor={theme.colors.placeholder}
+                    placeholderTextColor={colors.placeholder}
+                    selectionColor={colors.primary}
                     secureTextEntry={secureTextEntry ? hidden : false}
                     accessibilityLabel={label}
                     accessibilityHint={error ?? info}
@@ -114,8 +117,8 @@ const styles = StyleSheet.create({
         flexShrink: 1,
         fontSize: theme.font.label,
         fontWeight: "700",
-        color: theme.colors.text,
-        lineHeight: 26,
+        color: theme.colors.textMuted,
+        lineHeight: 22,
     },
     required: {
         color: theme.colors.danger,
@@ -151,7 +154,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderWidth: 2,
         borderColor: theme.colors.borderLight,
-        borderRadius: theme.radius.md,
+        borderRadius: 14,
         backgroundColor: theme.colors.inputBackground,
     },
     inputRowFocused: {

@@ -1,7 +1,13 @@
 import { ConvexError, v } from "convex/values";
 import { formatQuantityWithUnit, isValidQuantityForUnit } from "../src/lib/quantity";
+import {
+    calculateItemCostCents,
+    calculateSaleCostCents,
+    summarizeSalesReport,
+} from "../src/lib/salesReport";
 import { isValidPhone, normalizeForSearch, normalizeSpaces, onlyDigits } from "../src/lib/validation";
-import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { mutation, query, type QueryCtx } from "./_generated/server";
 import { requireStore } from "./lib";
 import {
     productUnitValidator,
@@ -10,6 +16,7 @@ import {
 } from "./validators";
 
 const MAX_CENTS = 100_000_000; // R$ 1.000.000,00
+const MAX_REPORT_RANGE_MS = 366 * 24 * 60 * 60 * 1000;
 
 const saleValidator = v.object({
     _id: v.id("sales"),
@@ -39,6 +46,28 @@ const saleItemValidator = v.object({
     subtotalCents: v.number(),
 });
 
+const reportItemValidator = v.object({
+    _id: v.id("saleItems"),
+    _creationTime: v.number(),
+    saleId: v.id("sales"),
+    productId: v.id("products"),
+    productName: v.string(),
+    unit: productUnitValidator,
+    quantity: v.number(),
+    unitPriceCents: v.number(),
+    unitCostCents: v.number(),
+    subtotalCents: v.number(),
+    costCents: v.number(),
+});
+
+const reportSummaryValidator = v.object({
+    salesCount: v.number(),
+    canceledCount: v.number(),
+    totalCents: v.number(),
+    costCents: v.number(),
+    profitCents: v.number(),
+});
+
 function roundQuantity(value: number): number {
     return Math.round(value * 1000) / 1000;
 }
@@ -55,6 +84,69 @@ function validatePhone(phone: string | undefined): string | undefined {
         throw new ConvexError("Telefone inválido. Digite DDD e número. Exemplo: (11) 91234-5678.");
     }
     return digits;
+}
+
+function validateReportPeriod(from: number, to: number) {
+    if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) {
+        throw new ConvexError("Período do registro de vendas inválido.");
+    }
+    if (to - from > MAX_REPORT_RANGE_MS) {
+        throw new ConvexError("Escolha um período de até 1 ano para o registro de vendas.");
+    }
+}
+
+/**
+ * Carrega as vendas do período e os itens com o custo da época. A consulta
+ * devolve as vendas mais novas primeiro.
+ */
+async function loadSalesReport(
+    ctx: QueryCtx,
+    storeId: Id<"stores">,
+    from: number,
+    to: number,
+) {
+    const sales = await ctx.db
+        .query("sales")
+        .withIndex("by_store_and_createdAt", (q) =>
+            q.eq("storeId", storeId).gte("createdAt", from).lt("createdAt", to),
+        )
+        .order("desc")
+        .collect();
+
+    return await Promise.all(
+        sales.map(async (sale) => {
+            const items = await ctx.db
+                .query("saleItems")
+                .withIndex("by_sale", (q) => q.eq("saleId", sale._id))
+                .collect();
+            items.sort((a, b) => a._creationTime - b._creationTime);
+
+            const reportItems = items.map((item) => ({
+                ...item,
+                costCents: calculateItemCostCents(item),
+            }));
+            const costCents = calculateSaleCostCents(items);
+
+            return {
+                sale,
+                items: reportItems,
+                costCents,
+                profitCents: sale.totalCents - costCents,
+            };
+        }),
+    );
+}
+
+function summarizeReport(
+    entries: Awaited<ReturnType<typeof loadSalesReport>>,
+) {
+    return summarizeSalesReport(
+        entries.map((entry) => ({
+            status: entry.sale.status,
+            totalCents: entry.sale.totalCents,
+            items: entry.items,
+        })),
+    );
 }
 
 /**
@@ -398,6 +490,108 @@ export const listRecent = query({
             .withIndex("by_store_and_createdAt", (q) => q.eq("storeId", store._id))
             .order("desc")
             .take(limit);
+    },
+});
+
+/**
+ * Registro completo de vendas do período, com itens, custo e lucro.
+ * As vendas canceladas continuam na lista para consulta, mas não entram no resumo.
+ */
+export const report = query({
+    args: {
+        from: v.number(),
+        to: v.number(),
+    },
+    returns: v.object({
+        summary: reportSummaryValidator,
+        sales: v.array(
+            v.object({
+                sale: saleValidator,
+                items: v.array(reportItemValidator),
+                costCents: v.number(),
+                profitCents: v.number(),
+            }),
+        ),
+    }),
+    handler: async (ctx, args) => {
+        const store = await requireStore(ctx);
+        validateReportPeriod(args.from, args.to);
+
+        const entries = await loadSalesReport(ctx, store._id, args.from, args.to);
+
+        return {
+            summary: summarizeReport(entries),
+            sales: entries,
+        };
+    },
+});
+
+/**
+ * Visão geral de todas as vendas da loja, agrupada por mês no fuso do aparelho.
+ * Usada na aba "Resumo geral" do Registro de Vendas.
+ */
+export const overview = query({
+    args: {
+        timezoneOffsetMinutes: v.number(),
+    },
+    returns: v.object({
+        summary: reportSummaryValidator,
+        months: v.array(
+            v.object({
+                monthStart: v.number(),
+                summary: reportSummaryValidator,
+            }),
+        ),
+    }),
+    handler: async (ctx, args) => {
+        const store = await requireStore(ctx);
+        if (
+            !Number.isFinite(args.timezoneOffsetMinutes) ||
+            Math.abs(args.timezoneOffsetMinutes) > 14 * 60
+        ) {
+            throw new ConvexError("Fuso horário inválido.");
+        }
+
+        const offsetMs = args.timezoneOffsetMinutes * 60 * 1000;
+        const entries = await loadSalesReport(ctx, store._id, 0, Date.now() + 24 * 60 * 60 * 1000);
+
+        const byMonth = new Map<number, typeof entries>();
+        for (const entry of entries) {
+            const local = new Date(entry.sale.createdAt + offsetMs);
+            const monthStart =
+                Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1) - offsetMs;
+            const bucket = byMonth.get(monthStart);
+            if (bucket) bucket.push(entry);
+            else byMonth.set(monthStart, [entry]);
+        }
+
+        const months = [...byMonth.entries()]
+            .sort((a, b) => b[0] - a[0])
+            .map(([monthStart, monthEntries]) => ({
+                monthStart,
+                summary: summarizeReport(monthEntries),
+            }));
+
+        return {
+            summary: summarizeReport(entries),
+            months,
+        };
+    },
+});
+
+/** Resumo financeiro do período para a tela inicial. */
+export const periodSummary = query({
+    args: {
+        from: v.number(),
+        to: v.number(),
+    },
+    returns: reportSummaryValidator,
+    handler: async (ctx, args) => {
+        const store = await requireStore(ctx);
+        validateReportPeriod(args.from, args.to);
+
+        const entries = await loadSalesReport(ctx, store._id, args.from, args.to);
+        return summarizeReport(entries);
     },
 });
 

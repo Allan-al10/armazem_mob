@@ -3,7 +3,9 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HelpModal } from "@/components/HelpModal";
+import { Logo } from "@/components/Logo";
 import { theme } from "@/theme";
+import { useAppTheme } from "@/themeContext";
 
 type ScreenHeaderProps = {
     title: string;
@@ -11,6 +13,9 @@ type ScreenHeaderProps = {
     helpKey: string;
     showBack?: boolean;
     onBack?: () => void;
+    actionIcon?: string;
+    actionLabel?: string;
+    onAction?: () => void;
 };
 
 export function ScreenHeader({
@@ -19,8 +24,12 @@ export function ScreenHeader({
     helpKey,
     showBack = false,
     onBack,
+    actionIcon,
+    actionLabel,
+    onAction,
 }: ScreenHeaderProps) {
     const insets = useSafeAreaInsets();
+    const { revision } = useAppTheme();
     const [helpVisible, setHelpVisible] = useState(false);
 
     const handleBack = () => {
@@ -35,36 +44,75 @@ export function ScreenHeader({
         router.replace("/");
     };
 
+    const hasAction = Boolean(actionIcon && onAction);
+
     return (
         <>
-            <View style={[styles.container, { paddingTop: insets.top + theme.spacing.sm }]}>
+            <View
+                key={revision}
+                style={[styles.container, { paddingTop: insets.top + theme.spacing.md }]}
+            >
                 <View style={styles.topRow}>
-                    {showBack ? (
-                        <Pressable
-                            onPress={handleBack}
-                            accessibilityRole="button"
-                            accessibilityLabel="Voltar"
-                            style={({ pressed }) => [styles.backButton, pressed ? styles.pressed : null]}
-                        >
-                            <Text style={styles.backText}>← Voltar</Text>
-                        </Pressable>
-                    ) : (
-                        <View />
-                    )}
+                    <View style={styles.side}>
+                        {showBack ? (
+                            <Pressable
+                                onPress={handleBack}
+                                hitSlop={8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Voltar"
+                                style={({ pressed }) => [
+                                    styles.circleButton,
+                                    pressed ? styles.pressed : null,
+                                ]}
+                            >
+                                <Text style={styles.circleText}>←</Text>
+                            </Pressable>
+                        ) : (
+                            <Logo size={40} />
+                        )}
+                    </View>
 
-                    <Pressable
-                        onPress={() => setHelpVisible(true)}
-                        accessibilityRole="button"
-                        accessibilityLabel="Abrir ajuda desta tela"
-                        style={({ pressed }) => [styles.helpButton, pressed ? styles.pressed : null]}
-                    >
-                        <Text style={styles.helpText}>? Ajuda</Text>
-                    </Pressable>
+                    <View style={styles.titleBlock}>
+                        <Text
+                            accessibilityRole="header"
+                            numberOfLines={2}
+                            style={styles.title}
+                        >
+                            {title}
+                        </Text>
+                    </View>
+
+                    <View style={[styles.side, styles.sideRight]}>
+                        {hasAction ? (
+                            <Pressable
+                                onPress={onAction}
+                                hitSlop={6}
+                                accessibilityRole="button"
+                                accessibilityLabel={actionLabel ?? "Ação"}
+                                style={({ pressed }) => [
+                                    styles.circleButton,
+                                    pressed ? styles.pressed : null,
+                                ]}
+                            >
+                                <Text style={styles.circleText}>{actionIcon}</Text>
+                            </Pressable>
+                        ) : null}
+
+                        <Pressable
+                            onPress={() => setHelpVisible(true)}
+                            hitSlop={6}
+                            accessibilityRole="button"
+                            accessibilityLabel="Abrir ajuda desta tela"
+                            style={({ pressed }) => [
+                                styles.circleButton,
+                                pressed ? styles.pressed : null,
+                            ]}
+                        >
+                            <Text style={styles.helpMark}>?</Text>
+                        </Pressable>
+                    </View>
                 </View>
 
-                <Text accessibilityRole="header" style={styles.title}>
-                    {title}
-                </Text>
                 {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
             </View>
 
@@ -79,57 +127,69 @@ export function ScreenHeader({
 
 const styles = StyleSheet.create({
     container: {
-        paddingHorizontal: theme.spacing.xl,
+        paddingHorizontal: theme.spacing.lg,
         paddingBottom: theme.spacing.lg,
-        backgroundColor: theme.colors.background,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.borderLight,
-        gap: theme.spacing.sm,
+        backgroundColor: theme.colors.header,
+        borderBottomWidth: 2,
+        borderBottomColor: "rgba(255, 255, 255, 0.18)",
+        gap: theme.spacing.xs,
     },
     topRow: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
-        minHeight: theme.touch.min,
+        minHeight: 48,
+        gap: theme.spacing.sm,
     },
-    backButton: {
-        minHeight: theme.touch.min,
-        justifyContent: "center",
-        paddingRight: theme.spacing.md,
+    side: {
+        width: 88,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: theme.spacing.sm,
     },
-    backText: {
-        fontSize: theme.font.body,
-        fontWeight: "700",
-        color: theme.colors.primary,
+    sideRight: {
+        justifyContent: "flex-end",
     },
-    helpButton: {
-        minHeight: theme.touch.min,
-        minWidth: theme.touch.min,
-        borderWidth: 2,
-        borderColor: theme.colors.primary,
-        borderRadius: theme.radius.pill,
-        paddingHorizontal: theme.spacing.lg,
+    titleBlock: {
+        flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: theme.colors.background,
+        minWidth: 0,
     },
-    helpText: {
-        fontSize: theme.font.small,
+    circleButton: {
+        width: 44,
+        height: 44,
+        borderRadius: theme.radius.pill,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "rgba(255, 255, 255, 0.15)",
+    },
+    circleText: {
+        fontSize: 22,
+        lineHeight: 28,
+        fontWeight: "700",
+        color: theme.colors.onPrimary,
+    },
+    helpMark: {
+        fontSize: 24,
+        lineHeight: 28,
         fontWeight: "800",
-        color: theme.colors.primary,
+        color: theme.colors.onPrimary,
     },
     pressed: {
-        opacity: 0.7,
+        opacity: 0.65,
     },
     title: {
         fontSize: theme.font.title,
         lineHeight: theme.lineHeight.title,
-        fontWeight: "800",
-        color: theme.colors.text,
+        fontWeight: "700",
+        color: theme.colors.onPrimary,
+        textAlign: "center",
     },
     subtitle: {
-        fontSize: theme.font.subtitle,
-        lineHeight: 29,
-        color: theme.colors.textMuted,
+        fontSize: theme.font.small,
+        lineHeight: theme.lineHeight.small,
+        color: "rgba(255, 255, 255, 0.82)",
+        textAlign: "center",
+        paddingHorizontal: theme.spacing.xl,
     },
 });

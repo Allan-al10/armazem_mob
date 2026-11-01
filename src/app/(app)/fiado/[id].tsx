@@ -6,6 +6,7 @@ import { Alert, StyleSheet, Text, View } from "react-native";
 import { BigButton } from "@/components/BigButton";
 import { CreditPaymentDialog } from "@/components/CreditPaymentDialog";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { FeedbackBanner } from "@/components/FeedbackBanner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { Screen } from "@/components/Screen";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -43,8 +44,11 @@ export default function CreditCustomerScreen() {
             <>
                 <ScreenHeader title="Fiado do cliente" helpKey="fiado-detalhe" showBack />
                 <Screen>
-                    <ErrorBanner message="Cliente não encontrado. Volte para Quem deve." />
-                    <BigButton label="Ir para Quem deve" onPress={() => router.replace("/fiado")} />
+                    <ErrorBanner message="Cliente não encontrado. Volte para Contas de Fiado." />
+                    <BigButton
+                        label="Ir para Contas de Fiado"
+                        onPress={() => router.replace("/fiado")}
+                    />
                 </Screen>
             </>
         );
@@ -60,7 +64,10 @@ export default function CreditCustomerScreen() {
                 <ScreenHeader title="Fiado do cliente" helpKey="fiado-detalhe" showBack />
                 <Screen>
                     <ErrorBanner message="Este cliente não foi encontrado na sua loja." />
-                    <BigButton label="Ir para Quem deve" onPress={() => router.replace("/fiado")} />
+                    <BigButton
+                        label="Ir para Contas de Fiado"
+                        onPress={() => router.replace("/fiado")}
+                    />
                 </Screen>
             </>
         );
@@ -141,13 +148,12 @@ export default function CreditCustomerScreen() {
             <Screen>
                 <ErrorBanner message={error} />
                 {success ? (
-                    <View
-                        style={styles.successBox}
-                        accessibilityRole="alert"
-                        accessibilityLiveRegion="polite"
-                    >
-                        <Text style={styles.successText}>✓ {success}</Text>
-                    </View>
+                    <FeedbackBanner
+                        tone="success"
+                        icon="✓"
+                        title="Pagamento registrado!"
+                        message={success}
+                    />
                 ) : null}
 
                 <View style={styles.customerCard}>
@@ -329,7 +335,7 @@ export default function CreditCustomerScreen() {
                 )}
 
                 <BigButton
-                    label="Voltar para Quem deve"
+                    label="Voltar para Contas de Fiado"
                     onPress={() => router.replace("/fiado")}
                     variant="ghost"
                 />

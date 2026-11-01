@@ -1,9 +1,10 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { router } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { BigButton } from "@/components/BigButton";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { Logo } from "@/components/Logo";
 import { Screen } from "@/components/Screen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { StepIndicator } from "@/components/StepIndicator";
@@ -98,10 +99,16 @@ export default function SignupScreen() {
                 onBack={() => router.replace("/login")}
             />
             <Screen>
+                <View style={styles.brand}>
+                    <Logo size={72} />
+                    <Text style={styles.brandName}>Estoque Fácil</Text>
+                </View>
+
                 <StepIndicator current={1} total={2} label="Seus dados" />
 
                 <Text style={styles.intro}>
-                    Preencha os campos abaixo. Depois você cadastra os dados do estabelecimento.
+                    Preencha os campos abaixo. Depois você cadastra os dados do
+                    estabelecimento.
                 </Text>
 
                 <ErrorBanner message={formError} />
@@ -222,6 +229,16 @@ export default function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
+    brand: {
+        alignItems: "center",
+        gap: theme.spacing.xs,
+    },
+    brandName: {
+        fontSize: theme.font.title,
+        lineHeight: theme.lineHeight.title,
+        fontWeight: "700",
+        color: theme.colors.primaryInk,
+    },
     intro: {
         fontSize: theme.font.body,
         lineHeight: theme.lineHeight.body,

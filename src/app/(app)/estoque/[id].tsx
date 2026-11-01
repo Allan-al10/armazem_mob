@@ -1,11 +1,12 @@
 import { useMutation, useQuery } from "convex/react";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { BigButton } from "@/components/BigButton";
 import { ChoiceRow } from "@/components/ChoiceRow";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { FeedbackBanner } from "@/components/FeedbackBanner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { MoneyInput } from "@/components/MoneyInput";
 import { Screen } from "@/components/Screen";
@@ -26,6 +27,7 @@ import {
 import type { ProductUnit } from "@/lib/types";
 import { normalizeSpaces } from "@/lib/validation";
 import { theme } from "@/theme";
+import { useAppTheme } from "@/themeContext";
 
 type ProductRecord = Doc<"products">;
 
@@ -155,6 +157,7 @@ const REASON_OPTIONS = [
 
 function AdjustStockForm({ product }: { product: ProductRecord }) {
     const adjust = useMutation(api.stock.adjust);
+    const { colors } = useAppTheme();
     const [open, setOpen] = useState(false);
     const [quantityText, setQuantityText] = useState("");
     const [reason, setReason] = useState<AdjustReason>("perda");
@@ -165,15 +168,27 @@ function AdjustStockForm({ product }: { product: ProductRecord }) {
     const [savedMessage, setSavedMessage] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
-    const openForm = () => {
+    const openForm = (initialQuantity?: number) => {
         setOpen(true);
-        setQuantityText("");
+        setQuantityText(
+            initialQuantity === undefined ? "" : formatQuantity(initialQuantity),
+        );
         setReason("perda");
         setOtherReason("");
         setQuantityError(null);
         setReasonError(null);
         setError(null);
     };
+
+    const step = product.unit === "kg" ? 0.5 : 1;
+    const nextQuantity = Math.max(
+        0,
+        Math.round((product.stockQty + step) * 1000) / 1000,
+    );
+    const previousQuantity = Math.max(
+        0,
+        Math.round((product.stockQty - step) * 1000) / 1000,
+    );
 
     const closeForm = () => {
         setOpen(false);
@@ -235,9 +250,55 @@ function AdjustStockForm({ product }: { product: ProductRecord }) {
 
     return (
         <View style={styles.card}>
-            <Text style={styles.currentStock}>
-                Quantidade atual: {formatQuantityWithUnit(product.stockQty, product.unit)}
-            </Text>
+            <View
+                style={[
+                    styles.stockRow,
+                    { borderColor: colors.border, backgroundColor: colors.bg },
+                ]}
+            >
+                <View style={styles.stockTexts}>
+                    <Text style={[styles.stockLabel, { color: colors.textMuted }]}>
+                        Quantidade atual
+                    </Text>
+                    <Text style={[styles.stockValue, { color: colors.text }]}>
+                        {formatQuantityWithUnit(product.stockQty, product.unit)}
+                    </Text>
+                </View>
+                <View style={styles.stepper}>
+                    <Pressable
+                        onPress={() => openForm(previousQuantity)}
+                        disabled={product.stockQty <= 0 || open}
+                        accessibilityRole="button"
+                        accessibilityLabel="Diminuir quantidade"
+                        style={({ pressed }) => [
+                            styles.stepperButton,
+                            { borderColor: colors.border, backgroundColor: colors.card },
+                            product.stockQty <= 0 || open ? styles.disabled : null,
+                            pressed ? styles.pressed : null,
+                        ]}
+                    >
+                        <Text style={[styles.stepperSymbol, { color: colors.text }]}>
+                            −
+                        </Text>
+                    </Pressable>
+                    <Pressable
+                        onPress={() => openForm(nextQuantity)}
+                        disabled={open}
+                        accessibilityRole="button"
+                        accessibilityLabel="Aumentar quantidade"
+                        style={({ pressed }) => [
+                            styles.stepperButton,
+                            { borderColor: colors.border, backgroundColor: colors.card },
+                            open ? styles.disabled : null,
+                            pressed ? styles.pressed : null,
+                        ]}
+                    >
+                        <Text style={[styles.stepperSymbol, { color: colors.text }]}>
+                            +
+                        </Text>
+                    </Pressable>
+                </View>
+            </View>
 
             {savedMessage ? (
                 <Text style={styles.savedText} accessibilityLiveRegion="polite">
@@ -424,6 +485,10 @@ export default function ProductDetailScreen() {
         api.products.get,
         productId ? { productId: productId as Id<"products"> } : "skip",
     );
+    const removeProduct = useMutation(api.products.remove);
+    const { colors } = useAppTheme();
+    const [deleteVisible, setDeleteVisible] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     if (productId === undefined) {
         return (
@@ -453,6 +518,23 @@ export default function ProductDetailScreen() {
 
     const lowStock = product.stockQty <= product.lowStockThreshold;
 
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+            await removeProduct({ productId: product._id });
+            setDeleteVisible(false);
+            if (router.canGoBack()) router.back();
+            else router.replace("/estoque");
+        } catch (error) {
+            Alert.alert(
+                "Não foi possível excluir",
+                friendlyError(error, "Tente de novo em alguns instantes."),
+            );
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     return (
         <>
             <ScreenHeader
@@ -462,57 +544,236 @@ export default function ProductDetailScreen() {
                 showBack
             />
             <Screen>
-                <View style={styles.summaryCard}>
-                    <Text style={styles.summaryLabel}>Quantidade em estoque</Text>
-                    <Text style={styles.summaryValue}>
-                        {formatQuantityWithUnit(product.stockQty, product.unit)}
-                    </Text>
-                    {lowStock ? (
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>⚠ Estoque baixo</Text>
+                <View
+                    style={[
+                        styles.summaryCard,
+                        { backgroundColor: colors.card, borderColor: colors.border },
+                    ]}
+                >
+                    <View style={styles.summaryTop}>
+                        <View
+                            style={[
+                                styles.productIcon,
+                                { backgroundColor: colors.surfaceStrong },
+                            ]}
+                        >
+                            <Text style={styles.productIconText}>📦</Text>
                         </View>
-                    ) : null}
-                    <Text style={styles.summaryRow}>
-                        Preço de venda: {formatCents(product.salePriceCents)}
-                    </Text>
-                    <Text style={styles.summaryRow}>
-                        Último custo:{" "}
-                        {product.lastUnitCostCents > 0
-                            ? formatCents(product.lastUnitCostCents)
-                            : "sem compra registrada"}
-                    </Text>
-                    <Text style={styles.summaryRow}>
-                        Aviso de estoque baixo: até{" "}
-                        {formatQuantityWithUnit(product.lowStockThreshold, product.unit)}
-                    </Text>
+                        <View style={styles.summaryTexts}>
+                            <Text
+                                style={[
+                                    styles.summaryLabel,
+                                    { color: colors.textMuted },
+                                ]}
+                            >
+                                Quantidade em estoque
+                            </Text>
+                            <Text style={[styles.summaryValue, { color: colors.text }]}>
+                                {formatQuantityWithUnit(product.stockQty, product.unit)}
+                            </Text>
+                            <Text
+                                style={[styles.summaryRow, { color: colors.textMuted }]}
+                            >
+                                Aviso de estoque baixo: até{" "}
+                                {formatQuantityWithUnit(
+                                    product.lowStockThreshold,
+                                    product.unit,
+                                )}
+                            </Text>
+                        </View>
+                    </View>
                 </View>
 
-                <Text style={styles.sectionTitle}>Preço e aviso</Text>
+                {lowStock ? (
+                    <FeedbackBanner
+                        tone="danger"
+                        icon="⚠"
+                        title="Estoque baixo"
+                        message={`Este produto está no limite de ${formatQuantityWithUnit(
+                            product.lowStockThreshold,
+                            product.unit,
+                        )}. Registre uma entrada no Caixa.`}
+                    />
+                ) : null}
+
+                <View style={styles.priceCards}>
+                    <View
+                        style={[
+                            styles.priceCard,
+                            { backgroundColor: colors.card, borderColor: colors.border },
+                        ]}
+                    >
+                        <Text style={[styles.priceLabel, { color: colors.textMuted }]}>
+                            Preço de compra
+                        </Text>
+                        <Text style={[styles.priceValue, { color: colors.text }]}>
+                            {product.lastUnitCostCents > 0
+                                ? formatCents(product.lastUnitCostCents)
+                                : "—"}
+                        </Text>
+                    </View>
+
+                    <View
+                        style={[
+                            styles.priceCard,
+                            {
+                                backgroundColor: colors.successBg,
+                                borderColor: colors.success,
+                            },
+                        ]}
+                    >
+                        <Text style={[styles.priceLabel, { color: colors.success }]}>
+                            Preço de venda
+                        </Text>
+                        <Text style={[styles.priceValue, { color: colors.success }]}>
+                            {formatCents(product.salePriceCents)}
+                        </Text>
+                    </View>
+                </View>
+
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    Preço e aviso
+                </Text>
                 <PriceAndThresholdForm product={product} />
 
-                <Text style={styles.sectionTitle}>Ajustar estoque</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    Ajustar estoque
+                </Text>
                 <AdjustStockForm product={product} />
 
-                <Text style={styles.sectionTitle}>Histórico</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                    Histórico
+                </Text>
                 <HistorySection productId={product._id} unit={product.unit} />
+
+                <BigButton
+                    label="Excluir produto"
+                    description="O histórico de vendas continua guardado"
+                    icon="🗑"
+                    variant="danger"
+                    onPress={() => setDeleteVisible(true)}
+                    style={styles.deleteButton}
+                />
             </Screen>
+
+            <ConfirmDialog
+                visible={deleteVisible}
+                title="Excluir produto?"
+                message={`Tem certeza que deseja excluir "${product.name}"? Ele deixa de aparecer para novas vendas e entradas, mas o histórico continua guardado.`}
+                confirmLabel="Sim, excluir"
+                cancelLabel="Não, manter"
+                destructive
+                loading={deleting}
+                onConfirm={() => {
+                    void handleDelete();
+                }}
+                onCancel={() => setDeleteVisible(false)}
+            />
         </>
     );
 }
 
 const styles = StyleSheet.create({
     summaryCard: {
-        backgroundColor: theme.colors.surface,
         borderWidth: 2,
-        borderColor: theme.colors.borderLight,
-        borderRadius: theme.radius.md,
+        borderRadius: theme.radius.lg,
         padding: theme.spacing.lg,
-        gap: theme.spacing.xs,
+    },
+    summaryTop: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: theme.spacing.lg,
+    },
+    productIcon: {
+        width: 76,
+        height: 76,
+        borderRadius: theme.radius.lg,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    productIconText: {
+        fontSize: 40,
+        lineHeight: 46,
+    },
+    summaryTexts: {
+        flex: 1,
+        gap: 2,
     },
     summaryLabel: {
         fontSize: theme.font.small,
         fontWeight: "700",
-        color: theme.colors.textMuted,
+    },
+    priceCards: {
+        flexDirection: "row",
+        gap: theme.spacing.md,
+    },
+    priceCard: {
+        flex: 1,
+        borderWidth: 2,
+        borderRadius: theme.radius.lg,
+        padding: theme.spacing.md,
+        gap: 2,
+    },
+    priceLabel: {
+        fontSize: 13,
+        lineHeight: 18,
+        fontWeight: "700",
+        textTransform: "uppercase",
+    },
+    priceValue: {
+        fontSize: theme.font.subtitle,
+        lineHeight: 27,
+        fontWeight: "700",
+    },
+    stockRow: {
+        borderWidth: 2,
+        borderRadius: theme.radius.lg,
+        padding: theme.spacing.md,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: theme.spacing.md,
+    },
+    stockTexts: {
+        flex: 1,
+        gap: 1,
+    },
+    stockLabel: {
+        fontSize: 13,
+        lineHeight: 18,
+        fontWeight: "700",
+        textTransform: "uppercase",
+    },
+    stockValue: {
+        fontSize: theme.font.subtitle,
+        lineHeight: 27,
+        fontWeight: "700",
+    },
+    stepper: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: theme.spacing.sm,
+    },
+    stepperButton: {
+        width: 44,
+        height: 44,
+        borderRadius: theme.radius.pill,
+        borderWidth: 2,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    stepperSymbol: {
+        fontSize: 24,
+        lineHeight: 26,
+        fontWeight: "700",
+    },
+    disabled: {
+        opacity: 0.35,
+    },
+    pressed: {
+        opacity: 0.7,
+    },
+    deleteButton: {
+        marginTop: theme.spacing.lg,
     },
     summaryValue: {
         fontSize: theme.font.title,

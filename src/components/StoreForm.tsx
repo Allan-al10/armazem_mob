@@ -156,7 +156,7 @@ export function StoreForm({ initial, submitLabel, onSubmit }: StoreFormProps) {
                 value={values.tradeName}
                 onChangeText={(text) => updateValue("tradeName", text)}
                 error={errors.tradeName}
-                placeholder="Ex.: Armazém São José"
+                placeholder="Ex.: Mercadinho São José"
                 autoCapitalize="words"
                 autoCorrect={false}
                 maxLength={80}

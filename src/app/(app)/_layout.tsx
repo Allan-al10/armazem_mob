@@ -6,9 +6,10 @@ import {
 } from "@/lib/push";
 import type { NotificationTarget } from "@/lib/pushTypes";
 import { usePushRegistration } from "@/lib/usePushRegistration";
-import { theme } from "@/theme";
+import { useAppTheme } from "@/themeContext";
 
 export default function AppLayout() {
+    const { colors } = useAppTheme();
     usePushRegistration();
 
     const lastTarget = useRef<string | null>(null);
@@ -31,7 +32,7 @@ export default function AppLayout() {
         }
 
         if (target.url === "/fiado") {
-            router.push("/fiado");
+            router.navigate("/fiado");
         }
     }, []);
 
@@ -56,8 +57,10 @@ export default function AppLayout() {
         <Stack
             screenOptions={{
                 headerShown: false,
-                contentStyle: { backgroundColor: theme.colors.background },
+                contentStyle: { backgroundColor: colors.bg },
             }}
-        />
+        >
+            <Stack.Screen name="(tabs)" />
+        </Stack>
     );
 }

@@ -214,7 +214,9 @@ export const registerPayment = mutation({
 
         const credit = await ctx.db.get(args.creditId);
         if (credit === null || credit.storeId !== store._id) {
-            throw new ConvexError("Fiado não encontrado. Volte para Quem deve e tente de novo.");
+            throw new ConvexError(
+                "Fiado não encontrado. Volte para Contas de Fiado e tente de novo.",
+            );
         }
         if (credit.status === "paid" || balanceOf(credit) <= 0) {
             throw new ConvexError("Este fiado já está quitado.");

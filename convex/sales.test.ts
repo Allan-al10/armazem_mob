@@ -52,6 +52,56 @@ async function seedStore(t: Test, stockQty = 10) {
     });
 }
 
+async function seedReportedSale(
+    t: Test,
+    args: {
+        storeId: Id<"stores">;
+        customerId: Id<"customers">;
+        productId: Id<"products">;
+        number: number;
+        createdAt: number;
+        status: "completed" | "canceled";
+        totalCents: number;
+        quantity: number;
+        unitPriceCents: number;
+        unitCostCents: number;
+    },
+) {
+    return await t.run(async (ctx) => {
+        const saleId = await ctx.db.insert("sales", {
+            storeId: args.storeId,
+            customerId: args.customerId,
+            number: args.number,
+            customerName: "Maria Souza",
+            customerPhone: "11999999999",
+            totalCents: args.totalCents,
+            paymentMethod: "cash",
+            status: args.status,
+            createdAt: args.createdAt,
+            ...(args.status === "canceled" ? { canceledAt: args.createdAt + 1 } : {}),
+        });
+        await ctx.db.insert("saleItems", {
+            saleId,
+            productId: args.productId,
+            productName: "Arroz 5 kg",
+            unit: "unidade",
+            quantity: args.quantity,
+            unitPriceCents: args.unitPriceCents,
+            unitCostCents: args.unitCostCents,
+            subtotalCents: args.totalCents,
+        });
+        return saleId;
+    });
+}
+
+function monthStartFor(timestamp: number, offsetMinutes: number): number {
+    const local = new Date(timestamp + offsetMinutes * 60_000);
+    return (
+        Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1) -
+        offsetMinutes * 60_000
+    );
+}
+
 async function readSaleState(
     t: Test,
     saleId: Id<"sales">,
@@ -168,6 +218,220 @@ describe("sales.create", () => {
             return product?.stockQty;
         });
         expect(stockQty).toBe(10);
+    });
+});
+
+describe("sales.report", () => {
+    test("mostra itens, custo e lucro e exclui canceladas do resumo", async () => {
+        const t = convexTest(schema, modules);
+        const { userId, customerId, productId } = await seedStore(t, 10);
+        const asMaria = t.withIdentity({ subject: userId });
+
+        const activeSaleId = await asMaria.mutation(api.sales.create, {
+            customerId,
+            customerName: "Maria Souza",
+            customerPhone: "11999999999",
+            items: [{ productId, quantity: 3, unitPriceCents: 500 }],
+            paymentMethod: "cash",
+        });
+        const canceledSaleId = await asMaria.mutation(api.sales.create, {
+            customerId,
+            customerName: "Maria Souza",
+            customerPhone: "11999999999",
+            items: [{ productId, quantity: 2, unitPriceCents: 500 }],
+            paymentMethod: "pix",
+        });
+        await asMaria.mutation(api.sales.cancel, { saleId: canceledSaleId });
+
+        const now = Date.now();
+        const report = await asMaria.query(api.sales.report, {
+            from: now - 60_000,
+            to: now + 60_000,
+        });
+
+        expect(report.summary).toEqual({
+            salesCount: 1,
+            canceledCount: 1,
+            totalCents: 1500,
+            costCents: 1200,
+            profitCents: 300,
+        });
+        expect(report.sales).toHaveLength(2);
+
+        const active = report.sales.find((entry) => entry.sale._id === activeSaleId);
+        expect(active?.sale.status).toBe("completed");
+        expect(active?.costCents).toBe(1200);
+        expect(active?.profitCents).toBe(300);
+        expect(active?.items[0]).toMatchObject({
+            productName: "Arroz 5 kg",
+            quantity: 3,
+            unitPriceCents: 500,
+            unitCostCents: 400,
+            subtotalCents: 1500,
+            costCents: 1200,
+        });
+
+        const canceled = report.sales.find((entry) => entry.sale._id === canceledSaleId);
+        expect(canceled?.sale.status).toBe("canceled");
+        expect(canceled?.items).toHaveLength(1);
+    });
+
+    test("periodSummary devolve o mesmo resumo financeiro", async () => {
+        const t = convexTest(schema, modules);
+        const { userId, customerId, productId } = await seedStore(t, 10);
+        const asMaria = t.withIdentity({ subject: userId });
+
+        await asMaria.mutation(api.sales.create, {
+            customerId,
+            customerName: "Maria Souza",
+            customerPhone: "11999999999",
+            items: [{ productId, quantity: 2, unitPriceCents: 750 }],
+            paymentMethod: "card",
+        });
+
+        const now = Date.now();
+        const summary = await asMaria.query(api.sales.periodSummary, {
+            from: now - 60_000,
+            to: now + 60_000,
+        });
+
+        expect(summary).toEqual({
+            salesCount: 1,
+            canceledCount: 0,
+            totalCents: 1500,
+            costCents: 800,
+            profitCents: 700,
+        });
+    });
+
+    test("rejeita período inválido", async () => {
+        const t = convexTest(schema, modules);
+        const { userId } = await seedStore(t, 10);
+        const asMaria = t.withIdentity({ subject: userId });
+
+        await expect(
+            asMaria.query(api.sales.report, { from: 2000, to: 1000 }),
+        ).rejects.toThrow(/Período do registro de vendas inválido/);
+    });
+});
+
+describe("sales.overview", () => {
+    test("agrupa as vendas por mês local, da mais nova para a mais antiga", async () => {
+        const t = convexTest(schema, modules);
+        const { userId, storeId, customerId, productId } = await seedStore(t, 10);
+        const asMaria = t.withIdentity({ subject: userId });
+
+        const offsetMinutes = -180; // Brasília
+        const now = Date.now();
+        const currentMonthStart = monthStartFor(now, offsetMinutes);
+        const previousMonthStart = monthStartFor(currentMonthStart - 1, offsetMinutes);
+        const twoMonthsAgoStart = monthStartFor(previousMonthStart - 1, offsetMinutes);
+
+        await seedReportedSale(t, {
+            storeId,
+            customerId,
+            productId,
+            number: 1,
+            createdAt: now,
+            status: "completed",
+            totalCents: 1000,
+            quantity: 2,
+            unitPriceCents: 500,
+            unitCostCents: 400,
+        });
+        await seedReportedSale(t, {
+            storeId,
+            customerId,
+            productId,
+            number: 2,
+            createdAt: now,
+            status: "canceled",
+            totalCents: 500,
+            quantity: 1,
+            unitPriceCents: 500,
+            unitCostCents: 400,
+        });
+        await seedReportedSale(t, {
+            storeId,
+            customerId,
+            productId,
+            number: 3,
+            createdAt: previousMonthStart + 12 * 60 * 60 * 1000,
+            status: "completed",
+            totalCents: 2250,
+            quantity: 3,
+            unitPriceCents: 750,
+            unitCostCents: 400,
+        });
+        await seedReportedSale(t, {
+            storeId,
+            customerId,
+            productId,
+            number: 4,
+            createdAt: twoMonthsAgoStart + 12 * 60 * 60 * 1000,
+            status: "completed",
+            totalCents: 500,
+            quantity: 1,
+            unitPriceCents: 500,
+            unitCostCents: 400,
+        });
+
+        const overview = await asMaria.query(api.sales.overview, {
+            timezoneOffsetMinutes: offsetMinutes,
+        });
+
+        expect(overview.summary).toEqual({
+            salesCount: 3,
+            canceledCount: 1,
+            totalCents: 3750,
+            costCents: 2400,
+            profitCents: 1350,
+        });
+        expect(overview.months.map((month) => month.monthStart)).toEqual([
+            currentMonthStart,
+            previousMonthStart,
+            twoMonthsAgoStart,
+        ]);
+        expect(overview.months[0].summary).toEqual({
+            salesCount: 1,
+            canceledCount: 1,
+            totalCents: 1000,
+            costCents: 800,
+            profitCents: 200,
+        });
+        expect(overview.months[1].summary).toEqual({
+            salesCount: 1,
+            canceledCount: 0,
+            totalCents: 2250,
+            costCents: 1200,
+            profitCents: 1050,
+        });
+        expect(overview.months[2].summary).toEqual({
+            salesCount: 1,
+            canceledCount: 0,
+            totalCents: 500,
+            costCents: 400,
+            profitCents: 100,
+        });
+    });
+
+    test("rejeita fuso horário inválido", async () => {
+        const t = convexTest(schema, modules);
+        const { userId } = await seedStore(t, 10);
+        const asMaria = t.withIdentity({ subject: userId });
+
+        await expect(
+            asMaria.query(api.sales.overview, { timezoneOffsetMinutes: 15 * 60 + 1 }),
+        ).rejects.toThrow(/Fuso horário inválido/);
+    });
+
+    test("exige usuário logado", async () => {
+        const t = convexTest(schema, modules);
+        await seedStore(t, 10);
+
+        await expect(
+            t.query(api.sales.overview, { timezoneOffsetMinutes: -180 }),
+        ).rejects.toThrow(/Entre na sua conta/);
     });
 });
 

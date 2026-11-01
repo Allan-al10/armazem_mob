@@ -1,4 +1,4 @@
-# Meu Armazém: instruções para o agente
+# Estoque Fácil: instruções para o agente
 
 - Leia o `SPEC.md` antes de qualquer tarefa. Ele é a fonte da verdade do produto.
 - O projeto já existe e é **flat** (não é monorepo): rotas em `src/app/`, componentes em `src/components/`, utilitários em `src/lib/`, tema em `src/theme.ts` e backend em `convex/`. Não recrie estrutura nem sobrescreva arquivos sem ler antes.

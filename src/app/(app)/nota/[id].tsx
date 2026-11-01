@@ -8,6 +8,7 @@ import { Alert, Platform, StyleSheet, Text, View } from "react-native";
 import { BigButton } from "@/components/BigButton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { FeedbackBanner } from "@/components/FeedbackBanner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { SaleReceipt } from "@/components/SaleReceipt";
 import { Screen } from "@/components/Screen";
@@ -215,13 +216,24 @@ export default function SaleNoteScreen() {
     return (
         <>
             <ScreenHeader
-                title="Nota da venda"
+                title="Nota Gerada"
                 subtitle={`Nº ${formatSaleNumber(sale.number)} • ${sale.customerName}`}
                 helpKey="nota"
                 showBack
             />
             <Screen>
                 <ErrorBanner message={error} />
+
+                {!canceled ? (
+                    <FeedbackBanner
+                        tone="success"
+                        icon="✓"
+                        title="Venda registrada e estoque atualizado!"
+                        message={`Nota nº ${formatSaleNumber(
+                            sale.number,
+                        )} pronta para enviar ou imprimir.`}
+                    />
+                ) : null}
 
                 {canceled ? (
                     <View
@@ -303,7 +315,7 @@ export default function SaleNoteScreen() {
 
                 {creditData && !canceled ? (
                     <BigButton
-                        label="Ver fiado em Quem deve"
+                        label="Ver fiado em Contas de Fiado"
                         description="Registrar pagamento ou cobrar o cliente"
                         icon="📒"
                         variant="secondary"

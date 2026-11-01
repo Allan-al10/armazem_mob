@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { centsToInput, parseMoneyToCents } from "@/lib/money";
 import { theme } from "@/theme";
+import { useAppTheme } from "@/themeContext";
 
 type MoneyInputProps = {
     label: string;
@@ -22,6 +23,7 @@ export function MoneyInput({
     required = false,
     placeholder = "0,00",
 }: MoneyInputProps) {
+    const { colors } = useAppTheme();
     const [text, setText] = useState(() => centsToInput(valueCents));
     const [focused, setFocused] = useState(false);
     const [showInfo, setShowInfo] = useState(false);
@@ -90,7 +92,8 @@ export function MoneyInput({
                     onBlur={handleBlur}
                     keyboardType="decimal-pad"
                     placeholder={placeholder}
-                    placeholderTextColor={theme.colors.placeholder}
+                    placeholderTextColor={colors.placeholder}
+                    selectionColor={colors.primary}
                     style={styles.input}
                     accessibilityLabel={label}
                     accessibilityHint={error ?? info}
@@ -119,8 +122,8 @@ const styles = StyleSheet.create({
         flexShrink: 1,
         fontSize: theme.font.label,
         fontWeight: "700",
-        color: theme.colors.text,
-        lineHeight: 26,
+        color: theme.colors.textMuted,
+        lineHeight: 22,
     },
     required: {
         color: theme.colors.danger,
@@ -156,7 +159,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         borderWidth: 2,
         borderColor: theme.colors.borderLight,
-        borderRadius: theme.radius.md,
+        borderRadius: 14,
         backgroundColor: theme.colors.inputBackground,
         paddingLeft: theme.spacing.lg,
     },

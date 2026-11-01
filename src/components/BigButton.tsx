@@ -8,8 +8,9 @@ import {
     type ViewStyle,
 } from "react-native";
 import { theme } from "@/theme";
+import { useAppTheme } from "@/themeContext";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
+type Variant = "primary" | "secondary" | "accent" | "success" | "danger" | "ghost";
 
 type BigButtonProps = {
     label: string;
@@ -23,25 +24,6 @@ type BigButtonProps = {
     accessibilityHint?: string;
 };
 
-const variantStyles: Record<Variant, ViewStyle> = {
-    primary: {
-        backgroundColor: theme.colors.primary,
-        borderColor: theme.colors.primary,
-    },
-    secondary: {
-        backgroundColor: theme.colors.background,
-        borderColor: theme.colors.primary,
-    },
-    danger: {
-        backgroundColor: theme.colors.danger,
-        borderColor: theme.colors.danger,
-    },
-    ghost: {
-        backgroundColor: "transparent",
-        borderColor: "transparent",
-    },
-};
-
 export function BigButton({
     label,
     onPress,
@@ -53,9 +35,29 @@ export function BigButton({
     style,
     accessibilityHint,
 }: BigButtonProps) {
+    const { colors } = useAppTheme();
     const isDisabled = disabled || loading;
-    const isLightText = variant === "primary" || variant === "danger";
-    const indicatorColor = isLightText ? theme.colors.onPrimary : theme.colors.primary;
+    const isLightText =
+        variant === "primary" ||
+        variant === "accent" ||
+        variant === "success" ||
+        variant === "danger";
+    const indicatorColor = isLightText ? colors.onPrimary : colors.primaryInk;
+
+    const variantStyle: ViewStyle =
+        variant === "primary"
+            ? { backgroundColor: colors.primary, borderColor: colors.primary }
+            : variant === "accent"
+              ? { backgroundColor: colors.accent, borderColor: colors.accent }
+              : variant === "success"
+                ? { backgroundColor: colors.success, borderColor: colors.success }
+                : variant === "danger"
+                  ? { backgroundColor: colors.danger, borderColor: colors.danger }
+                  : variant === "secondary"
+                    ? { backgroundColor: colors.card, borderColor: colors.primaryInk }
+                    : { backgroundColor: "transparent", borderColor: "transparent" };
+
+    const labelColor = isLightText ? colors.onPrimary : colors.primaryInk;
 
     return (
         <Pressable
@@ -67,7 +69,7 @@ export function BigButton({
             accessibilityState={{ disabled: isDisabled, busy: loading }}
             style={({ pressed }) => [
                 styles.base,
-                variantStyles[variant],
+                variantStyle,
                 description ? styles.withDescription : null,
                 pressed && !isDisabled ? styles.pressed : null,
                 isDisabled ? styles.disabled : null,
@@ -77,9 +79,7 @@ export function BigButton({
             {loading ? (
                 <View style={styles.loadingRow}>
                     <ActivityIndicator size="large" color={indicatorColor} />
-                    <Text style={[styles.label, isLightText ? styles.lightLabel : styles.darkLabel]}>
-                        Aguarde...
-                    </Text>
+                    <Text style={[styles.label, { color: labelColor }]}>Aguarde...</Text>
                 </View>
             ) : (
                 <View style={styles.content}>
@@ -93,14 +93,16 @@ export function BigButton({
                         </Text>
                     ) : null}
                     <View style={styles.texts}>
-                        <Text style={[styles.label, isLightText ? styles.lightLabel : styles.darkLabel]}>
-                            {label}
-                        </Text>
+                        <Text style={[styles.label, { color: labelColor }]}>{label}</Text>
                         {description ? (
                             <Text
                                 style={[
                                     styles.description,
-                                    isLightText ? styles.lightDescription : styles.darkDescription,
+                                    {
+                                        color: isLightText
+                                            ? "rgba(255, 255, 255, 0.88)"
+                                            : colors.textMuted,
+                                    },
                                 ]}
                             >
                                 {description}
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     withDescription: {
-        minHeight: 80,
+        minHeight: 76,
     },
     pressed: {
         opacity: 0.82,
@@ -143,7 +145,8 @@ const styles = StyleSheet.create({
         gap: theme.spacing.md,
     },
     icon: {
-        fontSize: 30,
+        fontSize: 28,
+        lineHeight: 32,
     },
     texts: {
         flex: 1,
@@ -152,22 +155,10 @@ const styles = StyleSheet.create({
     label: {
         fontSize: theme.font.button,
         fontWeight: "700",
-        lineHeight: 28,
-    },
-    lightLabel: {
-        color: theme.colors.onPrimary,
-    },
-    darkLabel: {
-        color: theme.colors.primary,
+        lineHeight: 24,
     },
     description: {
         fontSize: theme.font.small,
         lineHeight: theme.lineHeight.small,
-    },
-    lightDescription: {
-        color: "#F2F7F2",
-    },
-    darkDescription: {
-        color: theme.colors.textMuted,
     },
 });

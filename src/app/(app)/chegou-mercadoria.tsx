@@ -5,6 +5,7 @@ import { BigButton } from "@/components/BigButton";
 import { ChoiceRow } from "@/components/ChoiceRow";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { FeedbackBanner } from "@/components/FeedbackBanner";
 import { MoneyInput } from "@/components/MoneyInput";
 import { ProductPicker, type ProductOption } from "@/components/ProductPicker";
 import { Screen } from "@/components/Screen";
@@ -43,7 +44,12 @@ const ARRIVAL_OPTIONS = [
     { value: "yesterday", label: "Ontem" },
 ] as const;
 
-export default function NewStockScreen() {
+const MODE_OPTIONS = [
+    { value: "existing", label: "Produto existente" },
+    { value: "new", label: "Produto novo" },
+] as const;
+
+export function ReceiveStockScreen({ inTab = false }: { inTab?: boolean }) {
     const products = useQuery(api.products.list);
     const registerEntry = useMutation(api.stock.registerEntry);
     const tutorial = useTutorial("chegou-mercadoria");
@@ -77,6 +83,12 @@ export default function NewStockScreen() {
             setUnitCostCents(calculateUnitCostCents(boxTotalCents, quantity));
         }
     }, [quantityText, boxTotalCents, unitCostEdited]);
+
+    useEffect(() => {
+        if (!savedMessage) return;
+        const timer = setTimeout(() => setSavedMessage(null), 3800);
+        return () => clearTimeout(timer);
+    }, [savedMessage]);
 
     const handleSelect = (product: ProductOption) => {
         setMode("existing");
@@ -239,19 +251,32 @@ export default function NewStockScreen() {
 
     return (
         <>
-            <ScreenHeader title="Chegou mercadoria" helpKey="chegou-mercadoria" showBack />
+            <ScreenHeader
+                title="Caixa"
+                subtitle="Chegada de produtos"
+                helpKey="chegou-mercadoria"
+                showBack={!inTab}
+            />
             <Screen>
                 <ErrorBanner message={submitError} />
 
                 {savedMessage ? (
-                    <View style={styles.successBox} accessibilityLiveRegion="polite">
-                        <Text style={styles.successTitle}>✔ Mercadoria salva!</Text>
-                        <Text style={styles.successText}>{savedMessage}</Text>
-                        <Text style={styles.successText}>
-                            Agora você pode registrar o próximo produto.
-                        </Text>
-                    </View>
+                    <FeedbackBanner
+                        tone="success"
+                        icon="✓"
+                        title="Estoque atualizado!"
+                        message={savedMessage}
+                    />
                 ) : null}
+
+                <ChoiceRow
+                    options={MODE_OPTIONS}
+                    value={mode}
+                    onChange={(value) => {
+                        if (value === "new") handleCreateNew();
+                        else handleBackToList();
+                    }}
+                />
 
                 <Text style={styles.sectionTitle}>Produto</Text>
 
@@ -412,10 +437,11 @@ export default function NewStockScreen() {
                 />
 
                 <BigButton
-                    label="Salvar mercadoria"
+                    label="Confirmar Entrada"
                     onPress={handleSubmit}
                     loading={saving}
                     icon="✓"
+                    variant="accent"
                     style={styles.save}
                 />
             </Screen>
@@ -441,6 +467,10 @@ export default function NewStockScreen() {
             />
         </>
     );
+}
+
+export default function NewStockScreen() {
+    return <ReceiveStockScreen />;
 }
 
 const styles = StyleSheet.create({

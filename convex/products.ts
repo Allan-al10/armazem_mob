@@ -31,10 +31,12 @@ export const list = query({
             .withIndex("by_store", (q) => q.eq("storeId", store._id))
             .collect();
 
-        return products.sort((a, b) => {
-            if (a.nameQuery === b.nameQuery) return a._creationTime - b._creationTime;
-            return a.nameQuery < b.nameQuery ? -1 : 1;
-        });
+        return products
+            .filter((product) => product.active)
+            .sort((a, b) => {
+                if (a.nameQuery === b.nameQuery) return a._creationTime - b._creationTime;
+                return a.nameQuery < b.nameQuery ? -1 : 1;
+            });
     },
 });
 
@@ -88,6 +90,26 @@ export const update = mutation({
             lowStockThreshold: args.lowStockThreshold,
             active: args.active,
         });
+        return null;
+    },
+});
+
+/**
+ * Exclui um produto da lista sem apagar o histórico de vendas e entradas.
+ * O produto deixa de aparecer para novas vendas e novas entradas.
+ */
+export const remove = mutation({
+    args: { productId: v.id("products") },
+    returns: v.null(),
+    handler: async (ctx, args) => {
+        const store = await requireStore(ctx);
+
+        const product = await ctx.db.get(args.productId);
+        if (product === null || product.storeId !== store._id) {
+            throw new ConvexError("Produto não encontrado.");
+        }
+
+        await ctx.db.patch(product._id, { active: false });
         return null;
     },
 });

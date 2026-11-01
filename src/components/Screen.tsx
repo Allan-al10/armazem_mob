@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "@/theme";
+import { useAppTheme } from "@/themeContext";
 
 type ScreenProps = {
     children: ReactNode;
@@ -19,9 +20,11 @@ type ScreenProps = {
 
 export function Screen({ children, contentContainerStyle, scroll = true }: ScreenProps) {
     const insets = useSafeAreaInsets();
+    const { revision } = useAppTheme();
 
     const content = (
         <View
+            key={revision}
             style={[
                 styles.content,
                 { paddingBottom: Math.max(insets.bottom, theme.spacing.xl) + theme.spacing.xl },
@@ -56,17 +59,17 @@ export function Screen({ children, contentContainerStyle, scroll = true }: Scree
 const styles = StyleSheet.create({
     flex: {
         flex: 1,
-        backgroundColor: theme.colors.background,
+        backgroundColor: theme.colors.bg,
     },
     scrollContent: {
         flexGrow: 1,
-        backgroundColor: theme.colors.background,
+        backgroundColor: theme.colors.bg,
     },
     content: {
         flexGrow: 1,
-        paddingHorizontal: theme.spacing.xl,
-        paddingTop: theme.spacing.xl,
+        paddingHorizontal: theme.spacing.screen,
+        paddingTop: theme.spacing.lg,
         gap: theme.spacing.lg,
-        backgroundColor: theme.colors.background,
+        backgroundColor: theme.colors.bg,
     },
 });

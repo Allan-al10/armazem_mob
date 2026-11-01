@@ -35,12 +35,12 @@ export const helpTexts: Record<string, HelpContent> = {
     home: {
         title: "Tela de início",
         steps: [
-            "Aqui você vê um resumo do dia: vendas, estoque baixo e fiados.",
-            "Os quatro botões grandes levam às tarefas principais.",
-            "Chegou mercadoria: registra os produtos que chegaram.",
-            "Nova venda: registra uma venda e prepara a nota.",
-            "Estoque: mostra os produtos e as quantidades.",
-            "Quem deve: mostra os fiados, os vencimentos e os pagamentos recebidos.",
+            "Aqui você vê quantos produtos tem, o total de itens e o resumo das vendas do mês.",
+            "O cartão Vendas de ... abre o Registro de Vendas, com custo, lucro e itens vendidos.",
+            "Os avisos mostram estoque baixo e contas de fiado que precisam de atenção.",
+            "O Acesso rápido leva às tarefas que você escolheu em Configurações.",
+            "Use o menu de baixo para Início, Produtos, Caixa e Nota.",
+            "O botão de engrenagem abre Configurações. O botão de interrogação abre esta ajuda.",
         ],
     },
     "meu-cadastro": {
@@ -53,26 +53,26 @@ export const helpTexts: Record<string, HelpContent> = {
         ],
     },
     "chegou-mercadoria": {
-        title: "Chegou mercadoria",
+        title: "Caixa — chegada de produtos",
         steps: [
-            "Escolha um produto da lista ou toque em Criar novo produto.",
-            "Digite quantas unidades chegaram.",
+            "Escolha Produto existente ou Produto novo. No novo, digite nome, unidade e estoque mínimo.",
+            "Digite a quantidade recebida.",
             "Digite o valor total que você pagou pela caixa inteira.",
-            "O valor unitário é calculado sozinho: valor da caixa dividido pela quantidade.",
+            "O valor unitário de compra é calculado sozinho: total dividido pela quantidade.",
             "Se precisar, você pode corrigir o valor unitário.",
             "Digite o preço que você vai cobrar do cliente por unidade.",
-            "Confira a mensagem de lucro e toque em Salvar mercadoria.",
-            "Depois de salvar, é só registrar o próximo produto.",
+            "Confira a mensagem de lucro e toque em Confirmar Entrada.",
+            "O estoque, o custo e o preço de venda são atualizados na hora.",
         ],
     },
     estoque: {
-        title: "Estoque",
+        title: "Produtos",
         steps: [
             "Aqui aparecem os produtos com a quantidade e o preço de venda.",
-            "Digite o nome na busca para encontrar um produto.",
-            "O aviso Estoque baixo aparece quando a quantidade chega ao limite.",
-            "Toque em um produto para ver o histórico e ajustar o estoque.",
-            "Para registrar mercadoria que chegou, use o botão no fim da lista.",
+            "Digite o nome no campo de busca para encontrar um produto.",
+            "A etiqueta Baixo aparece quando a quantidade chega ao limite.",
+            "Toque em um produto para ver preços, estoque e histórico.",
+            "Para registrar mercadoria que chegou, use a aba Caixa.",
         ],
     },
     produto: {
@@ -83,6 +83,7 @@ export const helpTexts: Record<string, HelpContent> = {
             "Ajustar estoque serve para perdas, quebras ou contagem.",
             "Todo ajuste precisa de um motivo e fica registrado no histórico.",
             "O histórico mostra as entradas, saídas de venda, cancelamentos e ajustes.",
+            "Excluir produto pede confirmação e mantém o histórico de vendas guardado.",
         ],
     },
     vender: {
@@ -96,11 +97,11 @@ export const helpTexts: Record<string, HelpContent> = {
             "Passo 3: confira os produtos e o total antes de continuar.",
             "Passo 4: escolha Dinheiro, Cartão, Pix ou Fiado. No dinheiro, pode registrar o valor recebido e ver o troco.",
             "No fiado, confira o nome, digite o telefone e o endereço e escolha a data combinada para pagamento.",
-            "Toque em Concluir venda. O estoque é baixado na hora e a nota fica pronta.",
+            "Toque em Finalizar Venda. O estoque é baixado na hora e a nota fica pronta.",
         ],
     },
     fiado: {
-        title: "Quem deve",
+        title: "Contas de Fiado",
         steps: [
             "Aqui aparecem os clientes com fiado em aberto, do vencimento mais próximo para o mais distante.",
             "A etiqueta mostra se está em dia, vence hoje ou está atrasado.",
@@ -120,13 +121,18 @@ export const helpTexts: Record<string, HelpContent> = {
         ],
     },
     vendas: {
-        title: "Vendas recentes",
+        title: "Registro de Vendas",
         steps: [
-            "Aqui aparecem as últimas vendas feitas na loja.",
-            "O cartão do topo mostra o total de hoje.",
+            "Use Por mês para ver um mês de cada vez ou Resumo geral para ver todas as vendas.",
+            "No modo Por mês, use as setas para escolher o mês.",
+            "Os cartões mostram total vendido, custo, lucro e número de vendas.",
+            "A faixa A receber mostra o total de fiado em aberto.",
+            "Itens vendidos no mês mostra a quantidade e o valor de cada produto.",
+            "Cada venda mostra os itens, o valor total, o custo e o lucro.",
+            "O custo usado é o valor que o produto tinha no momento da venda.",
+            "Vendas canceladas aparecem na lista, mas ficam fora do resumo.",
             "Toque em uma venda para abrir a nota de novo.",
             "Na nota, você pode enviar por WhatsApp, SMS, imprimir ou salvar em PDF.",
-            "Também pode cancelar uma venda. Os produtos voltam para o estoque.",
         ],
     },
     nota: {
@@ -146,11 +152,13 @@ export const helpTexts: Record<string, HelpContent> = {
     configuracoes: {
         title: "Configurações",
         steps: [
-            "Aqui você liga ou desliga os avisos de fiado.",
-            "Escolha com quantos dias de antecedência e em que horário o celular deve avisar.",
-            "Os avisos também saem no dia do vencimento e enquanto o fiado estiver atrasado.",
-            "Toque em Rever tutorial para ver as explicações de novo.",
-            "Depois de mudar, toque em Salvar configurações.",
+            "Em Aparência, escolha tema Claro ou Escuro.",
+            "Escolha o tamanho das letras e símbolos: Normal, Grande ou Muito grande.",
+            "Em Acesso rápido, use as setas para mudar a ordem e o × para remover.",
+            "Toque em um item disponível para adicionar à tela inicial.",
+            "Em Avisos de fiado, ligue ou desligue, escolha os dias e o horário.",
+            "Toque em Ativar avisos neste celular e permita as notificações.",
+            "Depois de mudar os avisos, toque em Salvar avisos de fiado.",
         ],
     },
     "coming-soon": {
@@ -173,18 +181,18 @@ export const tutorials: Record<string, TutorialStep[]> = {
     home: [
         {
             icon: "👋",
-            title: "Bem-vindo ao Meu Armazém",
+            title: "Bem-vindo ao Estoque Fácil",
             text: "Este aplicativo ajuda você a cuidar do estoque, das vendas e dos fiados. Vamos conhecer as partes principais.",
         },
         {
             icon: "📊",
-            title: "Resumo do dia",
-            text: "No Início você vê quanto vendeu hoje, quais produtos estão acabando e quem está devendo. Toque nos cartões de vendas e de fiados para abrir.",
+            title: "Sua tela de início",
+            text: "No Início você vê quantos produtos tem, o total de itens e o resumo das vendas do mês. Também aparecem avisos de estoque baixo e de fiado.",
         },
         {
             icon: "🧾",
             title: "Suas tarefas",
-            text: "Use os atalhos grandes para registrar mercadoria, fazer uma venda, ver o estoque ou cobrar um fiado.",
+            text: "Use o Acesso rápido para abrir Produtos, Caixa, Nota, Vendas, Fiados ou Meus dados. Você escolhe os atalhos em Configurações.",
         },
         {
             icon: "❓",
@@ -194,9 +202,9 @@ export const tutorials: Record<string, TutorialStep[]> = {
     ],
     "chegou-mercadoria": [
         {
-            icon: "📦",
-            title: "Chegou mercadoria",
-            text: "Use esta tela quando um fornecedor entregar produtos para a sua loja.",
+            icon: "🚛",
+            title: "Caixa — chegada de produtos",
+            text: "Use a aba Caixa quando um fornecedor entregar produtos para a sua loja.",
         },
         {
             icon: "🛒",
@@ -261,7 +269,7 @@ export const tutorials: Record<string, TutorialStep[]> = {
     fiado: [
         {
             icon: "📒",
-            title: "Quem deve",
+            title: "Contas de Fiado",
             text: "Aqui ficam os clientes com fiado em aberto. A lista mostra primeiro quem tem o vencimento mais próximo.",
         },
         {
@@ -324,7 +332,7 @@ export function getHelp(key: string): HelpContent {
     return helpTexts[key] ?? {
         title: "Ajuda",
         steps: [
-            "Esta tela faz parte do Meu Armazém.",
+            "Esta tela faz parte do Estoque Fácil.",
             "Se precisar de ajuda, pergunte ao responsável pelo estabelecimento.",
         ],
     };

@@ -1,9 +1,10 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { BigButton } from "@/components/BigButton";
 import { ErrorBanner } from "@/components/ErrorBanner";
+import { Logo } from "@/components/Logo";
 import { Screen } from "@/components/Screen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { TextField } from "@/components/TextField";
@@ -57,17 +58,18 @@ export default function LoginScreen() {
     return (
         <>
             <ScreenHeader
-                title="Meu Armazém"
+                title="Estoque Fácil"
                 subtitle="Entre para cuidar do seu negócio"
                 helpKey="login"
             />
             <Screen>
-                <Image
-                    source={require("@/assets/img1.png")}
-                    style={styles.illustration}
-                    resizeMode="contain"
-                    accessibilityLabel="Ilustração de um armazém"
-                />
+                <View style={styles.hero}>
+                    <Logo size={96} />
+                    <Text style={styles.heroTitle}>Bem-vindo de volta!</Text>
+                    <Text style={styles.heroText}>
+                        Controle o estoque, as vendas e os fiados em um só lugar.
+                    </Text>
+                </View>
 
                 <ErrorBanner message={formError} />
 
@@ -139,10 +141,24 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-    illustration: {
-        width: "100%",
-        height: 170,
-        marginVertical: theme.spacing.sm,
+    hero: {
+        alignItems: "center",
+        gap: theme.spacing.sm,
+        paddingVertical: theme.spacing.md,
+    },
+    heroTitle: {
+        fontSize: theme.font.subtitle,
+        lineHeight: 27,
+        fontWeight: "700",
+        color: theme.colors.text,
+        textAlign: "center",
+    },
+    heroText: {
+        fontSize: theme.font.body,
+        lineHeight: theme.lineHeight.body,
+        color: theme.colors.textMuted,
+        textAlign: "center",
+        maxWidth: 320,
     },
     divider: {
         height: 1,
