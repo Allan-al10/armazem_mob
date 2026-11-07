@@ -3,6 +3,8 @@
  * momento da venda, não o custo atual do produto.
  */
 
+import { startOfDay } from "./date";
+
 export type ReportItemInput = {
     quantity: number;
     unitCostCents: number;
@@ -15,6 +17,22 @@ export type ReportSaleInput = {
 };
 
 export type ReportSummary = {
+    salesCount: number;
+    canceledCount: number;
+    totalCents: number;
+    costCents: number;
+    profitCents: number;
+};
+
+export type DailyReportSaleInput = {
+    createdAt: number;
+    status: "completed" | "canceled";
+    totalCents: number;
+    costCents: number;
+};
+
+export type DailySalesSummary = {
+    dayStart: number;
     salesCount: number;
     canceledCount: number;
     totalCents: number;
@@ -66,4 +84,43 @@ export function summarizeSalesReport(sales: readonly ReportSaleInput[]): ReportS
         costCents,
         profitCents: totalCents - costCents,
     };
+}
+
+/**
+ * Agrupa as vendas por dia local. Canceladas aparecem na contagem do dia,
+ * mas ficam fora do total, custo e lucro.
+ */
+export function summarizeSalesByDay(
+    sales: readonly DailyReportSaleInput[],
+): DailySalesSummary[] {
+    const days = new Map<number, DailySalesSummary>();
+
+    for (const sale of sales) {
+        const dayStart = startOfDay(sale.createdAt).getTime();
+        const day = days.get(dayStart) ?? {
+            dayStart,
+            salesCount: 0,
+            canceledCount: 0,
+            totalCents: 0,
+            costCents: 0,
+            profitCents: 0,
+        };
+
+        if (sale.status === "canceled") {
+            day.canceledCount += 1;
+        } else {
+            day.salesCount += 1;
+            day.totalCents += Math.round(sale.totalCents);
+            day.costCents += Math.round(sale.costCents);
+        }
+
+        days.set(dayStart, day);
+    }
+
+    return Array.from(days.values())
+        .map((day) => ({
+            ...day,
+            profitCents: day.totalCents - day.costCents,
+        }))
+        .sort((a, b) => b.dayStart - a.dayStart);
 }

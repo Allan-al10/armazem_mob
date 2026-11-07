@@ -3,6 +3,7 @@ import {
     calculateItemCostCents,
     calculateSaleCostCents,
     calculateSaleProfitCents,
+    summarizeSalesByDay,
     summarizeSalesReport,
 } from "./salesReport";
 
@@ -51,6 +52,70 @@ describe("cálculos do registro de vendas", () => {
         expect(summarizeSalesReport([])).toEqual({
             salesCount: 0,
             canceledCount: 0,
+            totalCents: 0,
+            costCents: 0,
+            profitCents: 0,
+        });
+    });
+
+    test("agrupa vendas por dia e mantém canceladas fora dos valores", () => {
+        const firstDay = new Date(2026, 10, 2, 9, 30).getTime();
+        const secondDay = new Date(2026, 10, 3, 15, 10).getTime();
+
+        const days = summarizeSalesByDay([
+            {
+                createdAt: firstDay,
+                status: "completed",
+                totalCents: 2500,
+                costCents: 1000,
+            },
+            {
+                createdAt: firstDay,
+                status: "canceled",
+                totalCents: 900,
+                costCents: 400,
+            },
+            {
+                createdAt: secondDay,
+                status: "completed",
+                totalCents: 1800,
+                costCents: 700,
+            },
+        ]);
+
+        expect(days).toEqual([
+            {
+                dayStart: new Date(2026, 10, 3).getTime(),
+                salesCount: 1,
+                canceledCount: 0,
+                totalCents: 1800,
+                costCents: 700,
+                profitCents: 1100,
+            },
+            {
+                dayStart: new Date(2026, 10, 2).getTime(),
+                salesCount: 1,
+                canceledCount: 1,
+                totalCents: 2500,
+                costCents: 1000,
+                profitCents: 1500,
+            },
+        ]);
+    });
+
+    test("dia com apenas venda cancelada continua no relatório", () => {
+        const [day] = summarizeSalesByDay([
+            {
+                createdAt: new Date(2026, 10, 4, 12).getTime(),
+                status: "canceled",
+                totalCents: 5000,
+                costCents: 2000,
+            },
+        ]);
+
+        expect(day).toMatchObject({
+            salesCount: 0,
+            canceledCount: 1,
             totalCents: 0,
             costCents: 0,
             profitCents: 0,

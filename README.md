@@ -2,7 +2,7 @@
 
 App de controle de estoque, vendas e fiado para pequenos comerciantes, com interface pensada para pessoas de 50+ anos.
 
-> **Status:** Fases 0 a 5 concluídas no código e reformulação visual **Estoque Fácil** implementada (tema claro/escuro, escala de fonte, quatro abas Início/Produtos/Caixa/Nota, acesso rápido e resumo geral de vendas). A Fase 6 ainda depende de três validações externas: teste com pessoas de 50+, build final no EAS e teste do push em aparelho físico. O backend local só serve para desenvolvimento; para uso real é necessário um deployment Convex na nuvem. O relatório atualizado está em [RELATORIO.md](RELATORIO.md).
+> **Status:** Fases 0 a 5 concluídas no código e reformulação visual **Estoque Fácil** implementada (tema claro/escuro, escala de fonte, quatro abas Início/Produtos/Caixa/Nota, acesso rápido e resumo geral de vendas). O projeto está no **Expo SDK 58** e a inicialização foi otimizada para carregar fontes, preferências e sessão em paralelo. A Fase 6 ainda depende de três validações externas: teste com pessoas de 50+, build final no EAS e teste do push em aparelho físico. O backend local só serve para desenvolvimento; para uso real é necessário um deployment Convex na nuvem. O relatório atualizado está em [RELATORIO.md](RELATORIO.md).
 
 ## Controle de versão
 
@@ -63,11 +63,12 @@ O app usa **Convex Auth** com e-mail e senha.
 
 ### Testar no celular ou emulador
 
-O backend local escuta em todas as interfaces (`0.0.0.0:3210`). O `.env.local` atual aponta para `http://192.168.1.14:3210`, o IP da máquina, para facilitar o teste no celular físico. Se o IP mudar, ajuste essa variável e reinicie o Expo. Opções:
+O backend local escuta em todas as interfaces (`0.0.0.0:3210`). O `.env.local` pode manter `EXPO_PUBLIC_CONVEX_URL=http://127.0.0.1:3210`: em desenvolvimento, o app detecta quando o endereço é loopback e o substitui automaticamente pelo host do servidor Expo (por exemplo, `192.168.1.10`) ao abrir no Expo Go em um celular na mesma Wi-Fi. Isso evita editar o `.env.local` a cada mudança de IP.
 
-- **Emulador Android:** troque `EXPO_PUBLIC_CONVEX_URL` para `http://10.0.2.2:3210` no `.env.local`.
-- **Celular físico na mesma Wi-Fi:** use o IP da máquina, por exemplo `http://192.168.1.14:3210`, e reinicie o Expo. O IP pode mudar quando você trocar de rede.
-- **Web no mesmo computador:** `http://127.0.0.1:3210` também funciona; ajuste se necessário.
+- **Emulador Android:** com o servidor Expo em modo LAN, a troca também é automática. Se o Expo estiver em modo `localhost`, use `adb reverse tcp:3210 tcp:3210` ou defina `EXPO_PUBLIC_CONVEX_URL=http://10.0.2.2:3210`.
+- **Celular físico na mesma Wi-Fi:** rode `npx convex dev` e `npx expo start` em modo LAN. O endereço do Convex é ajustado em tempo de execução; o computador e o celular precisam estar na mesma rede e o firewall deve liberar as portas `3210` e `8081`.
+- **Web no mesmo computador:** `http://127.0.0.1:3210` funciona sem ajuste.
+- **Túnel do Expo:** o host do túnel não dá acesso ao Convex local. Nesse caso use um deployment na nuvem.
 - **Mais estável (recomendado para celular):** use um deployment na nuvem:
   1. Crie uma conta em https://dashboard.convex.dev
   2. Rode `npx convex login`
@@ -211,9 +212,16 @@ npx expo export --platform web
 npx expo export --platform android
 ```
 
-O lint está configurado com ESLint 9 + `eslint-config-expo` e passa sem avisos. O **Vitest** roda 7 arquivos e **47 testes** cobrindo moeda, saldo de fiado, vendas/baixa de estoque, lembretes, horário, configurações, datas, cálculo de custo/lucro do registro, agrupamento mensal do resumo geral e preferências de tema/fonte/acesso rápido; os testes do Convex usam `convex-test` em edge-runtime. As Fases 3 e 4 também foram validadas por testes e2e temporários do backend com `ConvexHttpClient` (62 e 66 verificações), removidos depois da execução.
+O lint está configurado com ESLint 9 + `eslint-config-expo` e passa sem avisos. O **Vitest** roda 8 arquivos e **56 testes** cobrindo moeda, saldo de fiado, vendas/baixa de estoque, lembretes, horário, configurações, datas, cálculo de custo/lucro do registro, agrupamento mensal do resumo geral, agrupamento diário do relatório, preferências de tema/fonte/acesso rápido e resolução do endereço local do Convex; os testes do Convex usam `convex-test` em edge-runtime. As Fases 3 e 4 também foram validadas por testes e2e temporários do backend com `ConvexHttpClient` (62 e 66 verificações), removidos depois da execução.
 
-O `expo-doctor` passa nos **21/21 checks**. Os bundles web e Android e o deploy local do Convex foram verificados. A interface reformulada também foi percorrida por um roteiro Playwright temporário no Chrome, em viewport de 420×900: cadastro, criação da loja, Início, Configurações com tema **Escuro** e letra **Muito grande** e **Resumo geral** de vendas, sem erros de console, `pageerror` ou requisições falhas. O push remoto real, o toque na notificação e a voz ainda dependem de um development build em aparelho físico. O `.gitignore` mantém `.expo/`, `.env*.local`, `node_modules/`, `dist/`, `.convex/` e `coverage/` fora do repositório.
+O `expo-doctor` passou em **20/20 checks** com o SDK 58 e `npx expo install --check` confirmou que as dependências estão alinhadas. Os bundles web e Android e o deploy local do Convex foram verificados. A interface reformulada também foi percorrida por um roteiro Playwright temporário no Chrome, em viewport de 420×900: cadastro, criação da loja, Início, Configurações com tema **Escuro** e letra **Muito grande**, **Resumo geral** de vendas e o novo fluxo **Registro de Vendas → relatório diário → Notas de Venda**, com cada nota em tabela. O push remoto real, o toque na notificação e a voz ainda dependem de um development build em aparelho físico. O `.gitignore` mantém `.expo/`, `.env*.local`, `node_modules/`, `dist/`, `.convex/` e `coverage/` fora do repositório.
+
+### Inicialização e desempenho
+
+- Fontes, preferências e sessão agora são carregadas em paralelo. Antes, cada etapa esperava a anterior antes de montar o provedor de autenticação.
+- A splash screen é liberada assim que a sessão termina de ser lida; a tela inicial pode mostrar o `LoadingScreen` enquanto as consultas da loja terminam, em vez de deixar a splash parada.
+- Em desenvolvimento, a URL loopback do Convex é trocada pelo host do servidor Expo, o que corrige o acesso pelo Expo Go em celular físico.
+- Medições locais no Chrome, viewport 420×900: login visível em **~0,9 s** e `/inicio` autenticado em **~0,7 s** com o bundle já compilado. A primeira carga após iniciar o Metro levou **~8,5 s** para compilar o bundle de desenvolvimento; esse tempo não representa um build de produção. A medição em aparelho físico continua pendente.
 
 ## Estrutura
 
@@ -242,7 +250,7 @@ O `expo-doctor` passa nos **21/21 checks**. Os bundles web e Android e o deploy 
 │   │   └── (app)/       # Stack autenticado: abas, detalhes, configurações e Meu cadastro
 │   │       └── (tabs)/  # barra inferior: Início, Produtos, Caixa e Nota
 │   ├── components/      # componentes acessíveis, tutorial, logo, cartões e diálogos
-│   ├── lib/             # moeda, quantidade, validações, datas, registro de vendas, preferências, erros, ajuda, nota, fiado, push e tutorial
+│   ├── lib/             # moeda, quantidade, validações, datas, registro de vendas, preferências, Convex, erros, ajuda, nota, fiado, push e tutorial
 │   ├── theme.ts         # temas claro/escuro, fontes e espaçamentos acessíveis
 │   ├── themeContext.tsx # preferências de tema, escala de fonte e acesso rápido
 │   └── assets/          # imagens
