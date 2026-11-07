@@ -54,7 +54,7 @@ export const QUICK_ACCESS_CATALOG: readonly QuickAccessItem[] = [
     {
         key: "vendas",
         label: "Registro de Vendas",
-        subtitle: "Vendas por mês, custo e lucro",
+        subtitle: "Relatório e notas de venda",
         icon: "📊",
         color: "success",
         route: "/vendas",
@@ -90,13 +90,23 @@ export type AppPreferences = {
     quickAccess: QuickAccessKey[];
 };
 
-const STORAGE_KEY = "estoque-facil:preferences:v1";
+// SecureStore só aceita letras, números, ponto, hífen e sublinhado na chave.
+const STORAGE_KEY = "estoque-facil.preferences.v1";
+const LEGACY_STORAGE_KEY = "estoque-facil:preferences:v1";
 
 export const DEFAULT_PREFERENCES: AppPreferences = {
     theme: "light",
     fontScale: "normal",
     quickAccess: [...DEFAULT_QUICK_ACCESS],
 };
+
+function serializePreferences(preferences: AppPreferences): string {
+    return JSON.stringify({
+        theme: preferences.theme,
+        fontScale: preferences.fontScale,
+        quickAccess: sanitizeQuickAccess(preferences.quickAccess),
+    });
+}
 
 function isThemeMode(value: unknown): value is ThemeMode {
     return value === "light" || value === "dark";
@@ -143,7 +153,18 @@ export function parsePreferences(raw: string | null): AppPreferences {
 
 export async function loadPreferences(): Promise<AppPreferences> {
     try {
-        return parsePreferences(await appStorage.getItem(STORAGE_KEY));
+        const current = await appStorage.getItem(STORAGE_KEY);
+        if (current !== null) return parsePreferences(current);
+
+        // Migra preferências salvas antes da correção da chave do SecureStore.
+        const legacy = await appStorage.getItem(LEGACY_STORAGE_KEY);
+        if (legacy !== null) {
+            const preferences = parsePreferences(legacy);
+            await appStorage.setItem(STORAGE_KEY, serializePreferences(preferences));
+            return preferences;
+        }
+
+        return parsePreferences(null);
     } catch {
         return { ...DEFAULT_PREFERENCES, quickAccess: [...DEFAULT_QUICK_ACCESS] };
     }
@@ -151,14 +172,7 @@ export async function loadPreferences(): Promise<AppPreferences> {
 
 export async function savePreferences(preferences: AppPreferences): Promise<void> {
     try {
-        await appStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify({
-                theme: preferences.theme,
-                fontScale: preferences.fontScale,
-                quickAccess: sanitizeQuickAccess(preferences.quickAccess),
-            }),
-        );
+        await appStorage.setItem(STORAGE_KEY, serializePreferences(preferences));
     } catch {
         // Preferências são uma conveniência; o app continua funcionando sem elas.
     }
