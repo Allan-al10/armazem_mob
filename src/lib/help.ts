@@ -123,27 +123,16 @@ export const helpTexts: Record<string, HelpContent> = {
     vendas: {
         title: "Registro de Vendas",
         steps: [
-            "Use Por mês para ver o relatório do mês ou Resumo geral para somar todas as vendas.",
+            "Use Por mês para ver um mês de cada vez ou Resumo geral para ver todas as vendas.",
             "No modo Por mês, use as setas para escolher o mês.",
             "Os cartões mostram total vendido, custo, lucro e número de vendas.",
-            "O Relatório de vendas mostra, dia a dia, a quantidade de vendas, o total, o custo e o lucro.",
-            "Toque em uma data do relatório para abrir as notas daquele dia.",
-            "O botão Abrir notas de venda mostra cada nota em uma tabela separada.",
             "A faixa A receber mostra o total de fiado em aberto.",
             "Itens vendidos no mês mostra a quantidade e o valor de cada produto.",
+            "Cada venda mostra os itens, o valor total, o custo e o lucro.",
             "O custo usado é o valor que o produto tinha no momento da venda.",
-            "Vendas canceladas aparecem nas notas, mas ficam fora do total, custo e lucro.",
-            "Na nota completa, você pode enviar por WhatsApp, SMS, imprimir ou salvar em PDF.",
-        ],
-    },
-    notas: {
-        title: "Notas de Venda",
-        steps: [
-            "Cada nota aparece em uma tabela separada, com item, quantidade, subtotal e total.",
-            "Use as setas para escolher o mês.",
-            "Se a tela abrir por uma data, toque em Ver mês inteiro para consultar todas as notas do mês.",
-            "Notas canceladas aparecem com aviso e ficam fora do total concluído.",
-            "Toque em Abrir nota completa para enviar, imprimir, salvar em PDF ou cancelar.",
+            "Vendas canceladas aparecem na lista, mas ficam fora do resumo.",
+            "Toque em uma venda para abrir a nota de novo.",
+            "Na nota, você pode enviar por WhatsApp, SMS, imprimir ou salvar em PDF.",
         ],
     },
     nota: {

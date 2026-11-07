@@ -1,34 +1,10 @@
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-async function readSecure(key: string): Promise<string | null> {
-    try {
-        return await SecureStore.getItemAsync(key);
-    } catch {
-        return null;
-    }
-}
-
-async function writeSecure(key: string, value: string): Promise<void> {
-    try {
-        await SecureStore.setItemAsync(key, value);
-    } catch {
-        // O app continua funcionando se o armazenamento seguro falhar.
-    }
-}
-
-async function removeSecure(key: string): Promise<void> {
-    try {
-        await SecureStore.deleteItemAsync(key);
-    } catch {
-        // O app continua funcionando se o armazenamento seguro falhar.
-    }
-}
-
 const secureStorage = {
-    getItem: readSecure,
-    setItem: writeSecure,
-    removeItem: removeSecure,
+    getItem: (key: string) => SecureStore.getItemAsync(key),
+    setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+    removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
 const webStorage = {

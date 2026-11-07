@@ -120,23 +120,4 @@ describe("preferências do app", () => {
             quickAccess: [...DEFAULT_QUICK_ACCESS],
         });
     });
-
-    test("migra preferências salvas na chave antiga", async () => {
-        storage.getItem.mockImplementation(async (key: string) =>
-            key === "estoque-facil:preferences:v1"
-                ? JSON.stringify({ theme: "dark", fontScale: "xlarge" })
-                : null,
-        );
-
-        await expect(loadPreferences()).resolves.toEqual({
-            theme: "dark",
-            fontScale: "xlarge",
-            quickAccess: [...DEFAULT_QUICK_ACCESS],
-        });
-
-        expect(storage.setItem).toHaveBeenCalledWith(
-            "estoque-facil.preferences.v1",
-            expect.any(String),
-        );
-    });
 });

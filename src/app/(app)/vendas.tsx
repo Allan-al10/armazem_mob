@@ -5,7 +5,6 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 import { BigButton } from "@/components/BigButton";
 import { ChoiceRow } from "@/components/ChoiceRow";
 import { FeedbackBanner } from "@/components/FeedbackBanner";
-import { MonthNavigator } from "@/components/MonthNavigator";
 import { Screen } from "@/components/Screen";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { StatCard } from "@/components/StatCard";
@@ -13,14 +12,14 @@ import { api } from "@/lib/api";
 import {
     addMonths,
     daysUntil,
-    formatDateBR,
+    formatDateTimeBR,
     formatMonthYearBR,
     startOfMonth,
 } from "@/lib/date";
 import { formatCents } from "@/lib/money";
 import { getDeviceTimezoneOffsetMinutes } from "@/lib/push";
 import { formatQuantityWithUnit } from "@/lib/quantity";
-import { summarizeSalesByDay } from "@/lib/salesReport";
+import { formatSaleNumber, paymentMethodLabel } from "@/lib/sale";
 import { theme } from "@/theme";
 import { useAppTheme } from "@/themeContext";
 
@@ -88,14 +87,6 @@ export default function SalesReportScreen() {
     const soldItems = [...soldItemsMap.values()].sort(
         (a, b) => b.totalCents - a.totalCents,
     );
-    const dailySales = summarizeSalesByDay(
-        sales.map((entry) => ({
-            createdAt: entry.sale.createdAt,
-            status: entry.sale.status,
-            totalCents: entry.sale.totalCents,
-            costCents: entry.costCents,
-        })),
-    );
     const overviewMaxCents = overview
         ? Math.max(1, ...overview.months.map((month) => month.summary.totalCents))
         : 1;
@@ -109,20 +100,11 @@ export default function SalesReportScreen() {
         setMonthStart((current) => addMonths(current, 1));
     };
 
-    const openNotes = (dayStart?: number) => {
-        const params: Record<string, string> = {
-            month: String(monthStart.getTime()),
-        };
-        if (dayStart !== undefined) params.date = String(dayStart);
-
-        router.push({ pathname: "/notas", params });
-    };
-
     return (
         <>
             <ScreenHeader
                 title="Registro de Vendas"
-                subtitle="Relatório por data e notas separadas"
+                subtitle="Custo, lucro e itens por mês"
                 helpKey="vendas"
                 showBack
             />
@@ -131,13 +113,56 @@ export default function SalesReportScreen() {
 
                 {view === "month" ? (
                     <>
-                        <MonthNavigator
-                            monthStart={monthStart}
-                            onPrevious={goToPreviousMonth}
-                            onNext={goToNextMonth}
-                            canGoNext={canGoNext}
-                            kicker="MÊS DO REGISTRO"
-                        />
+                        <View
+                            style={[
+                                styles.monthNav,
+                                { backgroundColor: colors.card, borderColor: colors.border },
+                            ]}
+                        >
+                            <Pressable
+                                onPress={goToPreviousMonth}
+                                hitSlop={6}
+                                accessibilityRole="button"
+                                accessibilityLabel="Mês anterior"
+                                style={({ pressed }) => [
+                                    styles.monthArrow,
+                                    { borderColor: colors.border },
+                                    pressed ? styles.pressed : null,
+                                ]}
+                            >
+                                <Text style={[styles.monthArrowText, { color: colors.text }]}>
+                                    ←
+                                </Text>
+                            </Pressable>
+
+                            <View style={styles.monthCenter}>
+                                <Text style={[styles.monthKicker, { color: colors.textMuted }]}>
+                                    MÊS DO REGISTRO
+                                </Text>
+                                <Text style={[styles.monthTitle, { color: colors.text }]}>
+                                    {monthLabel}
+                                </Text>
+                            </View>
+
+                            <Pressable
+                                onPress={goToNextMonth}
+                                disabled={!canGoNext}
+                                hitSlop={6}
+                                accessibilityRole="button"
+                                accessibilityLabel="Próximo mês"
+                                accessibilityState={{ disabled: !canGoNext }}
+                                style={({ pressed }) => [
+                                    styles.monthArrow,
+                                    { borderColor: colors.border },
+                                    !canGoNext ? styles.disabled : null,
+                                    pressed ? styles.pressed : null,
+                                ]}
+                            >
+                                <Text style={[styles.monthArrowText, { color: colors.text }]}>
+                                    →
+                                </Text>
+                            </Pressable>
+                        </View>
 
                         {summary === undefined ? (
                             <View style={styles.loadingBox}>
@@ -212,208 +237,6 @@ export default function SalesReportScreen() {
                             />
                         ) : null}
 
-                        <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                                Relatório de vendas
-                            </Text>
-                            <Text style={[styles.reportHint, { color: colors.textMuted }]}>
-                                Data, total, custo e lucro de cada dia. Toque em uma data
-                                para abrir as notas daquele dia.
-                            </Text>
-
-                            {report === undefined ? null : dailySales.length === 0 ? (
-                                <View
-                                    style={[
-                                        styles.emptyBox,
-                                        {
-                                            backgroundColor: colors.card,
-                                            borderColor: colors.border,
-                                        },
-                                    ]}
-                                >
-                                    <Text style={styles.emptyIcon} accessibilityElementsHidden>
-                                        📊
-                                    </Text>
-                                    <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                                        Nenhuma venda em {monthLabel}
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.emptyText,
-                                            { color: colors.textMuted },
-                                        ]}
-                                    >
-                                        Toque em Nova venda para registrar a primeira venda
-                                        deste mês.
-                                    </Text>
-                                </View>
-                            ) : (
-                                <View
-                                    style={[
-                                        styles.reportTable,
-                                        {
-                                            backgroundColor: colors.card,
-                                            borderColor: colors.border,
-                                        },
-                                    ]}
-                                >
-                                    <View
-                                        style={[
-                                            styles.reportHeader,
-                                            {
-                                                backgroundColor: colors.surfaceStrong,
-                                                borderBottomColor: colors.border,
-                                            },
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.reportHeaderText,
-                                                { color: colors.text },
-                                            ]}
-                                        >
-                                            Data
-                                        </Text>
-                                        <Text
-                                            style={[
-                                                styles.reportHeaderText,
-                                                styles.reportHeaderValue,
-                                                { color: colors.text },
-                                            ]}
-                                        >
-                                            Valores
-                                        </Text>
-                                    </View>
-
-                                    {dailySales.map((day, index) => {
-                                        const salesLabel = `${day.salesCount} venda${
-                                            day.salesCount === 1 ? "" : "s"
-                                        }`;
-                                        const canceledLabel =
-                                            day.canceledCount > 0
-                                                ? ` • ${day.canceledCount} cancelada${
-                                                      day.canceledCount === 1 ? "" : "s"
-                                                  }`
-                                                : "";
-
-                                        return (
-                                            <Pressable
-                                                key={day.dayStart}
-                                                accessibilityRole="button"
-                                                accessibilityLabel={`${formatDateBR(
-                                                    day.dayStart,
-                                                )}: ${salesLabel}${canceledLabel}, total ${formatCents(
-                                                    day.totalCents,
-                                                )}, custo ${formatCents(
-                                                    day.costCents,
-                                                )}, lucro ${formatCents(
-                                                    day.profitCents,
-                                                )}. Toque para abrir as notas do dia.`}
-                                                onPress={() => openNotes(day.dayStart)}
-                                                style={({ pressed }) => [
-                                                    styles.reportRow,
-                                                    index > 0
-                                                        ? {
-                                                              borderTopWidth: 1,
-                                                              borderTopColor:
-                                                                  colors.border,
-                                                          }
-                                                        : null,
-                                                    pressed ? styles.pressed : null,
-                                                ]}
-                                            >
-                                                <View style={styles.reportRowTop}>
-                                                    <View style={styles.reportDateBlock}>
-                                                        <Text
-                                                            style={[
-                                                                styles.reportDate,
-                                                                { color: colors.text },
-                                                            ]}
-                                                        >
-                                                            {formatDateBR(day.dayStart)}
-                                                        </Text>
-                                                        <Text
-                                                            style={[
-                                                                styles.reportDateMeta,
-                                                                {
-                                                                    color: colors.textMuted,
-                                                                },
-                                                            ]}
-                                                        >
-                                                            {salesLabel}
-                                                            {canceledLabel}
-                                                        </Text>
-                                                    </View>
-                                                    <Text
-                                                        style={[
-                                                            styles.reportTotal,
-                                                            { color: colors.text },
-                                                        ]}
-                                                        numberOfLines={1}
-                                                        adjustsFontSizeToFit
-                                                    >
-                                                        {formatCents(day.totalCents)}
-                                                    </Text>
-                                                </View>
-
-                                                <View style={styles.reportValues}>
-                                                    <Text
-                                                        style={[
-                                                            styles.reportValueText,
-                                                            {
-                                                                color: colors.textMuted,
-                                                            },
-                                                        ]}
-                                                    >
-                                                        Custo{" "}
-                                                        {formatCents(day.costCents)}
-                                                    </Text>
-                                                    <Text
-                                                        style={[
-                                                            styles.reportValueText,
-                                                            {
-                                                                color:
-                                                                    day.profitCents < 0
-                                                                        ? colors.danger
-                                                                        : colors.success,
-                                                            },
-                                                        ]}
-                                                    >
-                                                        Lucro{" "}
-                                                        {formatCents(day.profitCents)}
-                                                    </Text>
-                                                    <Text
-                                                        style={[
-                                                            styles.reportOpen,
-                                                            {
-                                                                color: colors.primaryInk,
-                                                            },
-                                                        ]}
-                                                    >
-                                                        Ver notas ›
-                                                    </Text>
-                                                </View>
-                                            </Pressable>
-                                        );
-                                    })}
-                                </View>
-                            )}
-                        </View>
-
-                        <BigButton
-                            label="Abrir notas de venda"
-                            description={
-                                sales.length === 0
-                                    ? `Nenhuma nota em ${monthLabel}`
-                                    : `${sales.length} nota${
-                                          sales.length === 1 ? "" : "s"
-                                      } em ${monthLabel}, cada uma em sua tabela`
-                            }
-                            icon="🧾"
-                            variant="secondary"
-                            onPress={() => openNotes()}
-                        />
-
                         <BigButton
                             label="Nova venda"
                             description="Registrar uma venda e preparar a nota"
@@ -485,6 +308,299 @@ export default function SalesReportScreen() {
                             </View>
                         ) : null}
 
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                                Vendas do mês
+                            </Text>
+
+                            {report === undefined ? null : sales.length === 0 ? (
+                                <View
+                                    style={[
+                                        styles.emptyBox,
+                                        {
+                                            backgroundColor: colors.card,
+                                            borderColor: colors.border,
+                                        },
+                                    ]}
+                                >
+                                    <Text style={styles.emptyIcon} accessibilityElementsHidden>
+                                        🧾
+                                    </Text>
+                                    <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                                        Nenhuma venda em {monthLabel}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.emptyText,
+                                            { color: colors.textMuted },
+                                        ]}
+                                    >
+                                        Toque em Nova venda para registrar a primeira venda
+                                        deste mês.
+                                    </Text>
+                                </View>
+                            ) : (
+                                sales.map((entry) => {
+                                    const { sale, items, costCents, profitCents } = entry;
+                                    const canceled = sale.status === "canceled";
+                                    const paymentTone =
+                                        sale.paymentMethod === "credit_account"
+                                            ? { bg: colors.dangerBg, fg: colors.danger }
+                                            : sale.paymentMethod === "cash"
+                                              ? { bg: colors.successBg, fg: colors.success }
+                                              : sale.paymentMethod === "pix"
+                                                ? { bg: colors.warnBg, fg: colors.warnInk }
+                                                : {
+                                                      bg: colors.surfaceStrong,
+                                                      fg: colors.primaryInk,
+                                                  };
+
+                                    return (
+                                        <Pressable
+                                            key={sale._id}
+                                            onPress={() =>
+                                                router.push({
+                                                    pathname: "/nota/[id]",
+                                                    params: { id: sale._id },
+                                                })
+                                            }
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`Venda ${formatSaleNumber(
+                                                sale.number,
+                                            )}, ${sale.customerName}, ${formatCents(
+                                                sale.totalCents,
+                                            )}, ${
+                                                canceled ? "cancelada" : "concluída"
+                                            }. Toque para abrir a nota.`}
+                                            style={({ pressed }) => [
+                                                styles.saleCard,
+                                                {
+                                                    backgroundColor: canceled
+                                                        ? colors.dangerBg
+                                                        : colors.card,
+                                                    borderColor: canceled
+                                                        ? colors.danger
+                                                        : colors.border,
+                                                },
+                                                pressed ? styles.pressed : null,
+                                            ]}
+                                        >
+                                            <View style={styles.saleTop}>
+                                                <View style={styles.saleHeading}>
+                                                    <Text
+                                                        style={[
+                                                            styles.saleNumber,
+                                                            { color: colors.textMuted },
+                                                        ]}
+                                                    >
+                                                        Venda nº{" "}
+                                                        {formatSaleNumber(sale.number)}
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.saleDate,
+                                                            { color: colors.textMuted },
+                                                        ]}
+                                                    >
+                                                        {formatDateTimeBR(sale.createdAt)}
+                                                    </Text>
+                                                </View>
+                                                <Text
+                                                    style={[
+                                                        styles.saleTotal,
+                                                        {
+                                                            color: canceled
+                                                                ? colors.danger
+                                                                : colors.text,
+                                                            textDecorationLine: canceled
+                                                                ? "line-through"
+                                                                : "none",
+                                                        },
+                                                    ]}
+                                                >
+                                                    {formatCents(sale.totalCents)}
+                                                </Text>
+                                            </View>
+
+                                            <View style={styles.customerRow}>
+                                                <Text
+                                                    style={[
+                                                        styles.saleCustomer,
+                                                        { color: colors.text },
+                                                    ]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {sale.customerName}
+                                                </Text>
+                                                <View
+                                                    style={[
+                                                        styles.paymentTag,
+                                                        { backgroundColor: paymentTone.bg },
+                                                    ]}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.paymentTagText,
+                                                            { color: paymentTone.fg },
+                                                        ]}
+                                                    >
+                                                        {paymentMethodLabel(
+                                                            sale.paymentMethod,
+                                                        )}
+                                                    </Text>
+                                                </View>
+                                            </View>
+
+                                            {canceled ? (
+                                                <View
+                                                    style={[
+                                                        styles.canceledBadge,
+                                                        {
+                                                            borderColor: colors.danger,
+                                                            backgroundColor: colors.card,
+                                                        },
+                                                    ]}
+                                                >
+                                                    <Text
+                                                        style={[
+                                                            styles.canceledBadgeText,
+                                                            { color: colors.danger },
+                                                        ]}
+                                                    >
+                                                        VENDA CANCELADA • FORA DO RESUMO
+                                                    </Text>
+                                                </View>
+                                            ) : null}
+
+                                            <View
+                                                style={[
+                                                    styles.itemsBox,
+                                                    {
+                                                        backgroundColor: colors.bg,
+                                                        borderColor: colors.border,
+                                                    },
+                                                ]}
+                                            >
+                                                {items.length === 0 ? (
+                                                    <Text
+                                                        style={[
+                                                            styles.emptyItems,
+                                                            { color: colors.textMuted },
+                                                        ]}
+                                                    >
+                                                        Itens não encontrados para esta venda.
+                                                    </Text>
+                                                ) : (
+                                                    items.map((item) => (
+                                                        <View
+                                                            key={item._id}
+                                                            style={styles.itemRow}
+                                                        >
+                                                            <View style={styles.itemInfo}>
+                                                                <Text
+                                                                    style={[
+                                                                        styles.itemName,
+                                                                        { color: colors.text },
+                                                                    ]}
+                                                                    numberOfLines={1}
+                                                                >
+                                                                    {item.productName}
+                                                                </Text>
+                                                                <Text
+                                                                    style={[
+                                                                        styles.itemMeta,
+                                                                        {
+                                                                            color: colors.textMuted,
+                                                                        },
+                                                                    ]}
+                                                                >
+                                                                    {formatQuantityWithUnit(
+                                                                        item.quantity,
+                                                                        item.unit,
+                                                                    )}{" "}
+                                                                    ×{" "}
+                                                                    {formatCents(
+                                                                        item.unitPriceCents,
+                                                                    )}
+                                                                </Text>
+                                                            </View>
+                                                            <Text
+                                                                style={[
+                                                                    styles.itemSubtotal,
+                                                                    { color: colors.text },
+                                                                ]}
+                                                            >
+                                                                {formatCents(
+                                                                    item.subtotalCents,
+                                                                )}
+                                                            </Text>
+                                                        </View>
+                                                    ))
+                                                )}
+                                            </View>
+
+                                            <View
+                                                style={[
+                                                    styles.saleTotals,
+                                                    { borderTopColor: colors.border },
+                                                ]}
+                                            >
+                                                <View style={styles.totalLine}>
+                                                    <Text
+                                                        style={[
+                                                            styles.totalLabel,
+                                                            { color: colors.textMuted },
+                                                        ]}
+                                                    >
+                                                        Custo
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.totalValue,
+                                                            { color: colors.text },
+                                                        ]}
+                                                    >
+                                                        {formatCents(costCents)}
+                                                    </Text>
+                                                </View>
+                                                <View style={styles.totalLine}>
+                                                    <Text
+                                                        style={[
+                                                            styles.totalLabel,
+                                                            { color: colors.textMuted },
+                                                        ]}
+                                                    >
+                                                        Lucro
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.totalValue,
+                                                            {
+                                                                color:
+                                                                    profitCents < 0
+                                                                        ? colors.danger
+                                                                        : colors.success,
+                                                            },
+                                                        ]}
+                                                    >
+                                                        {formatCents(profitCents)}
+                                                    </Text>
+                                                </View>
+                                            </View>
+
+                                            <Text
+                                                style={[
+                                                    styles.openHint,
+                                                    { color: colors.primaryInk },
+                                                ]}
+                                            >
+                                                Toque para abrir a nota
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })
+                            )}
+                        </View>
                     </>
                 ) : overview === undefined ? (
                     <View style={styles.loadingBox}>
@@ -699,6 +815,47 @@ export default function SalesReportScreen() {
 }
 
 const styles = StyleSheet.create({
+    monthNav: {
+        borderWidth: 2,
+        borderRadius: theme.radius.lg,
+        padding: theme.spacing.md,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: theme.spacing.md,
+    },
+    monthArrow: {
+        width: 44,
+        height: 44,
+        borderRadius: theme.radius.pill,
+        borderWidth: 2,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    monthArrowText: {
+        fontSize: 24,
+        lineHeight: 28,
+        fontWeight: "700",
+    },
+    monthCenter: {
+        flex: 1,
+        alignItems: "center",
+        gap: 1,
+    },
+    monthKicker: {
+        fontSize: 12,
+        lineHeight: 16,
+        fontWeight: "700",
+        letterSpacing: 0.6,
+    },
+    monthTitle: {
+        fontSize: theme.font.subtitle,
+        lineHeight: 27,
+        fontWeight: "700",
+        textAlign: "center",
+    },
+    disabled: {
+        opacity: 0.35,
+    },
     pressed: {
         opacity: 0.72,
     },
@@ -796,82 +953,133 @@ const styles = StyleSheet.create({
         lineHeight: theme.lineHeight.small,
         textAlign: "center",
     },
-    reportHint: {
-        fontSize: theme.font.small,
-        lineHeight: theme.lineHeight.small,
-        color: theme.colors.textMuted,
-    },
-    reportTable: {
+    saleCard: {
         borderWidth: 2,
         borderRadius: theme.radius.lg,
-        overflow: "hidden",
+        padding: theme.spacing.lg,
+        gap: theme.spacing.sm,
     },
-    reportHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: theme.spacing.lg,
-        paddingVertical: theme.spacing.sm,
-        borderBottomWidth: 1,
-    },
-    reportHeaderText: {
-        fontSize: 12,
-        lineHeight: 16,
-        fontWeight: "700",
-        letterSpacing: 0.6,
-        textTransform: "uppercase",
-    },
-    reportHeaderValue: {
-        textAlign: "right",
-    },
-    reportRow: {
-        minHeight: theme.touch.min,
-        paddingHorizontal: theme.spacing.lg,
-        paddingVertical: theme.spacing.md,
-        gap: theme.spacing.xs,
-    },
-    reportRowTop: {
+    saleTop: {
         flexDirection: "row",
         alignItems: "flex-start",
         justifyContent: "space-between",
         gap: theme.spacing.md,
     },
-    reportDateBlock: {
+    saleHeading: {
         flex: 1,
         gap: 1,
     },
-    reportDate: {
-        fontSize: theme.font.body,
-        lineHeight: 24,
+    saleNumber: {
+        fontSize: 13,
+        lineHeight: 18,
         fontWeight: "700",
     },
-    reportDateMeta: {
+    saleDate: {
         fontSize: 13,
         lineHeight: 18,
     },
-    reportTotal: {
-        maxWidth: "48%",
+    saleTotal: {
         fontSize: theme.font.bodyLarge,
         lineHeight: 26,
         fontWeight: "700",
         textAlign: "right",
     },
-    reportValues: {
+    customerRow: {
         flexDirection: "row",
-        flexWrap: "wrap",
         alignItems: "center",
         gap: theme.spacing.sm,
     },
-    reportValueText: {
+    saleCustomer: {
+        flex: 1,
+        fontSize: theme.font.body,
+        lineHeight: 22,
+        fontWeight: "700",
+    },
+    paymentTag: {
+        borderRadius: theme.radius.pill,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 2,
+    },
+    paymentTagText: {
+        fontSize: 12,
+        lineHeight: 16,
+        fontWeight: "700",
+    },
+    canceledBadge: {
+        alignSelf: "flex-start",
+        borderWidth: 2,
+        borderRadius: theme.radius.pill,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+    },
+    canceledBadgeText: {
+        fontSize: 11,
+        lineHeight: 15,
+        fontWeight: "700",
+    },
+    itemsBox: {
+        gap: theme.spacing.sm,
+        borderWidth: 1,
+        borderRadius: theme.radius.md,
+        padding: theme.spacing.md,
+    },
+    emptyItems: {
+        fontSize: theme.font.small,
+        lineHeight: theme.lineHeight.small,
+    },
+    itemRow: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: theme.spacing.md,
+    },
+    itemInfo: {
+        flex: 1,
+        gap: 1,
+    },
+    itemName: {
+        fontSize: 15,
+        lineHeight: 20,
+        fontWeight: "700",
+    },
+    itemMeta: {
         fontSize: 13,
         lineHeight: 18,
-        fontWeight: "600",
     },
-    reportOpen: {
-        marginLeft: "auto",
+    itemSubtotal: {
+        fontSize: 15,
+        lineHeight: 20,
+        fontWeight: "700",
+        textAlign: "right",
+    },
+    saleTotals: {
+        gap: theme.spacing.xs,
+        borderTopWidth: 1,
+        paddingTop: theme.spacing.sm,
+    },
+    totalLine: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: theme.spacing.md,
+    },
+    totalLabel: {
+        flex: 1,
         fontSize: 13,
         lineHeight: 18,
         fontWeight: "700",
+    },
+    totalValue: {
+        fontSize: 15,
+        lineHeight: 20,
+        fontWeight: "700",
+        textAlign: "right",
+    },
+    openHint: {
+        fontSize: 13,
+        lineHeight: 18,
+        fontWeight: "700",
+        textAlign: "center",
     },
     overviewRow: {
         borderWidth: 2,

@@ -24,25 +24,22 @@ export default function RootLayout() {
         AtkinsonHyperlegible_400Regular,
         AtkinsonHyperlegible_700Bold,
     });
-    const fontsReady = fontsLoaded || Boolean(fontError);
 
-    // A autenticação e as preferências começam a carregar imediatamente,
-    // em paralelo com as fontes. Antes, cada etapa esperava a anterior.
+    if (!fontsLoaded && !fontError) return null;
+
     return (
         <SafeAreaProvider>
-            <ConvexAuthProvider client={convex} storage={authStorage}>
-                <AppPreferencesProvider>
-                    <ThemedApp fontsReady={fontsReady} />
-                </AppPreferencesProvider>
-            </ConvexAuthProvider>
+            <AppPreferencesProvider>
+                <ConvexAuthProvider client={convex} storage={authStorage}>
+                    <ThemedApp />
+                </ConvexAuthProvider>
+            </AppPreferencesProvider>
         </SafeAreaProvider>
     );
 }
 
-function ThemedApp({ fontsReady }: { fontsReady: boolean }) {
+function ThemedApp() {
     const { mode } = useAppTheme();
-
-    if (!fontsReady) return null;
 
     return (
         <>
@@ -56,16 +53,15 @@ function RootNavigator() {
     const { isLoading, isAuthenticated } = useConvexAuth();
     const { colors } = useAppTheme();
     const store = useQuery(api.stores.getMine, isAuthenticated ? {} : "skip");
+    const ready = !isLoading && (!isAuthenticated || store !== undefined);
 
     useEffect(() => {
-        // A splash não deve esperar a consulta da loja: se o servidor estiver
-        // lento ou indisponível, a tela de carregamento do app aparece antes.
-        if (!isLoading) {
+        if (ready) {
             void SplashScreen.hideAsync().catch(() => {
                 // A splash screen pode não existir na versão web.
             });
         }
-    }, [isLoading]);
+    }, [ready]);
 
     return (
         <Stack
