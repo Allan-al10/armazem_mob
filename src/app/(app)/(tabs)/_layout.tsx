@@ -67,7 +67,6 @@ export default function TabsLayout() {
 
     return (
         <Tabs
-            initialRouteName="inicio"
             backBehavior="history"
             screenOptions={{
                 headerShown: false,

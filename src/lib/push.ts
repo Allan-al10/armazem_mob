@@ -1,5 +1,9 @@
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
+import {
+    AndroidImportance,
+    IosAuthorizationStatus,
+} from "expo-notifications";
 import { Platform } from "react-native";
 import type {
     NotificationTarget,
@@ -46,8 +50,8 @@ function isPermissionGranted(
 ): boolean {
     return (
         status.granted ||
-        status.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL ||
-        status.ios?.status === Notifications.IosAuthorizationStatus.EPHEMERAL
+        status.ios?.status === IosAuthorizationStatus.PROVISIONAL ||
+        status.ios?.status === IosAuthorizationStatus.EPHEMERAL
     );
 }
 
@@ -57,7 +61,7 @@ async function ensureAndroidChannel() {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
         name: "Avisos de fiado",
         description: "Lembretes de vencimento dos fiados",
-        importance: Notifications.AndroidImportance.HIGH,
+        importance: AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: "#0F5B2A",
     });
