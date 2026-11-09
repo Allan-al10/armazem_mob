@@ -21,6 +21,10 @@
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_CONVEX_URL": "https://dynamic-swan-561.convex.cloud",
+        "EXPO_PUBLIC_CONVEX_SITE_URL": "https://dynamic-swan-561.convex.site"
       }
     }
   },
