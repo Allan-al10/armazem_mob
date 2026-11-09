@@ -9,12 +9,20 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_CONVEX_URL": "https://dynamic-swan-561.convex.cloud",
+        "EXPO_PUBLIC_CONVEX_SITE_URL": "https://dynamic-swan-561.convex.site"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_CONVEX_URL": "https://dynamic-swan-561.convex.cloud",
+        "EXPO_PUBLIC_CONVEX_SITE_URL": "https://dynamic-swan-561.convex.site"
       }
     },
     "production": {

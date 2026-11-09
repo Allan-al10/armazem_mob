@@ -2,7 +2,7 @@
 
 App de controle de estoque, vendas e fiado para pequenos comerciantes, com interface pensada para pessoas de 50+ anos.
 
-> **Status:** Fases 0 a 5 concluídas no código e reformulação visual **Estoque Fácil** implementada (tema claro/escuro, escala de fonte, quatro abas Início/Produtos/Caixa/Nota, acesso rápido e resumo geral de vendas). A Fase 6 ainda depende de três validações externas: teste com pessoas de 50+, build final no EAS e teste do push em aparelho físico. O desenvolvimento usa o deployment Convex na nuvem `amiable-stork-958`; o deployment de produção é `dynamic-swan-561`. O relatório atualizado está em [RELATORIO.md](RELATORIO.md).
+> **Status:** Fases 0 a 5 concluídas no código e reformulação visual **Estoque Fácil** implementada (tema claro/escuro, escala de fonte, quatro abas Início/Produtos/Caixa/Nota, acesso rápido e resumo geral de vendas). A Fase 6 ainda depende de três validações externas: teste com pessoas de 50+, build final no EAS e teste do push em aparelho físico. Os testes do app usam o deployment Convex na nuvem `dynamic-swan-561`, o mesmo da produção; `amiable-stork-958` fica disponível para desenvolvimento do backend. O relatório atualizado está em [RELATORIO.md](RELATORIO.md).
 
 ## Controle de versão
 
@@ -30,15 +30,17 @@ npm install
 
 ## Backend (Convex)
 
-O projeto usa um **deployment Convex na nuvem para desenvolvimento**, `amiable-stork-958`. O `.env.local` guarda apenas `CONVEX_DEPLOYMENT` (ignorado pelo Git) e o `.env.development.local` guarda as URLs públicas desse deployment. As URLs de produção, `dynamic-swan-561`, ficam em `.env.production` e no perfil `production` do `eas.json`.
+O projeto usa o **deployment Convex na nuvem `dynamic-swan-561`** para testes e produção. O `.env.local` guarda apenas `CONVEX_DEPLOYMENT=dev:amiable-stork-958` (ignorado pelo Git), usado pelo `npx convex dev` para desenvolver o backend. O `.env.development.local` aponta o app em teste para as URLs públicas de `dynamic-swan-561`; as URLs de produção ficam em `.env.production` e nos perfis `development`, `preview` e `production` do `eas.json`.
 
-Em um terminal, deixe rodando:
+Para desenvolver o backend, deixe rodando em um terminal:
 
 ```bash
 npx convex dev
 ```
 
-Esse comando sincroniza as funções com o deployment de desenvolvimento na nuvem, gera os tipos em `convex/_generated/` e observa mudanças nos arquivos. Ele também publica os cron jobs de `convex/crons.ts`: atualização de fiados atrasados no minuto UTC 5 e envio de avisos no minuto UTC 10, de hora em hora. O envio só acontece quando a hora local configurada pela loja coincide com o horário escolhido.
+Esse comando sincroniza as funções com o deployment de desenvolvimento `amiable-stork-958`, gera os tipos em `convex/_generated/` e observa mudanças nos arquivos. Ele também publica os cron jobs de `convex/crons.ts`: atualização de fiados atrasados no minuto UTC 5 e envio de avisos no minuto UTC 10, de hora em hora. O envio só acontece quando a hora local configurada pela loja coincide com o horário escolhido.
+
+Para apenas testar o app, não é necessário rodar `npx convex dev`: o app usa `dynamic-swan-561`. Mudanças em `convex/` só aparecem no app depois de `npx convex deploy`.
 
 Para publicar as funções no deployment de produção:
 
@@ -60,8 +62,7 @@ npx convex run health:ping
 O app usa **Convex Auth** com e-mail e senha.
 
 - As chaves `JWT_PRIVATE_KEY` e `JWKS` ficam configuradas **no deployment**, não no `.env.local`.
-- No desenvolvimento, elas já estão configuradas no deployment `amiable-stork-958`.
-- No deployment de produção `dynamic-swan-561`, elas também já estão configuradas. Se criar um novo deployment de produção, rode:
+- Nos deployments `dynamic-swan-561` (teste/produção) e `amiable-stork-958` (desenvolvimento do backend), elas já estão configuradas. Se criar um novo deployment, rode:
 
   ```bash
   npx @convex-dev/auth --prod
@@ -78,10 +79,10 @@ O app usa **Convex Auth** com e-mail e senha.
 
 ### Ambientes e teste no celular
 
-- **Desenvolvimento:** `npx expo start` carrega `.env.development.local` (URLs de `amiable-stork-958`) e `.env.local` (apenas `CONVEX_DEPLOYMENT=dev:amiable-stork-958`). Os dois arquivos são ignorados pelo Git.
-- **Produção:** `.env.production` e o perfil `production` do `eas.json` apontam para `https://dynamic-swan-561.convex.cloud` e `https://dynamic-swan-561.convex.site`. O backend de produção já está publicado e com as chaves JWT configuradas.
+- **Teste/desenvolvimento do app:** `npx expo start` carrega `.env.development.local`, que aponta para `dynamic-swan-561` (o mesmo deployment da produção). O `.env.local` guarda apenas `CONVEX_DEPLOYMENT=dev:amiable-stork-958` para o `npx convex dev`. Os dois arquivos são ignorados pelo Git.
+- **Produção:** `.env.production` e os perfis `development`, `preview` e `production` do `eas.json` apontam para `https://dynamic-swan-561.convex.cloud` e `https://dynamic-swan-561.convex.site`. O backend já está publicado e com as chaves JWT configuradas.
 - O arquivo `.env.local` é carregado também em produção e tem prioridade sobre `.env.production`; por isso ele não deve conter `EXPO_PUBLIC_CONVEX_*`. Use `.env.development.local` para os valores de desenvolvimento.
-- Para testar no celular físico, o app usa o deployment na nuvem; não é necessário configurar IP local.
+- Para testar no celular físico, o app usa `dynamic-swan-561`; não é necessário configurar IP local. Ao trocar de deployment, faça logout ou limpe os dados do app, porque a sessão antiga pertence ao outro deployment.
 - Para gerar um build de produção, use `npx eas-cli@latest build --profile production`.
 
 ### Notificações push (development build)
